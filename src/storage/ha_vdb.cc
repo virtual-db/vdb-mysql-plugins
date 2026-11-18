@@ -164,7 +164,7 @@ int ha_vdb_mysql_storage::start_stmt(THD *thd, thr_lock_type lt) {
 }
 
 THR_LOCK_DATA **ha_vdb_mysql_storage::store_lock(THD *, THR_LOCK_DATA **to, enum thr_lock_type lt) {
-  if (lt != TL_IGNORE && lock_data.type == TL_UNLCK) {
+  if (lt != TL_IGNORE && lock_data.type == TL_UNLOCK) {
     /* Row locks are vdb-core's: let concurrent writers in, as InnoDB does. */
     if (lt >= TL_WRITE_CONCURRENT_INSERT && lt <= TL_WRITE) lt = TL_WRITE_ALLOW_WRITE;
     if (lt == TL_READ_NO_INSERT) lt = TL_READ;

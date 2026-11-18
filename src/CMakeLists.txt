@@ -5,6 +5,7 @@ ADD_DEFINITIONS(-DMYSQL_SERVER)
 
 # The protocol codec, generated from vdb.proto with MySQL's bundled protoc
 # and linked against its libprotobuf-lite (D-81).
+FILE(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 MYSQL_PROTOBUF_GENERATE_CPP_LIBRARY(vdb_protocol_lite
   ${CMAKE_CURRENT_SOURCE_DIR}/common/vdb.proto
   OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
@@ -42,8 +43,8 @@ SET(VDB_SOURCES
 )
 
 MYSQL_ADD_PLUGIN(vdb ${VDB_SOURCES}
-  STORAGE_ENGINE MODULE_ONLY
-  LINK_LIBRARIES vdb_protocol_lite)
+  STORAGE_ENGINE MODULE_ONLY MODULE_OUTPUT_NAME "vdb"
+  LINK_LIBRARIES vdb_protocol_lite extra::rapidjson)
 IF(TARGET vdb)
   TARGET_INCLUDE_DIRECTORIES(vdb SYSTEM BEFORE PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
   STRING(REPLACE " " ";" vdb_pb_flags "${MY_PUBLIC_PROTOBUF_FLAGS}")

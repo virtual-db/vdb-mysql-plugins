@@ -85,7 +85,6 @@ ha_rows ha_vdb_mysql_storage::records_in_range(uint inx, key_range *min_key, key
   if (c == nullptr || tid == 0) return 10;
   vdb::Stats m;
   m.set_table(tid);
-  m.set_has_range(true);
   m.set_index(inx);
   vdb::Range *r = m.mutable_range();
   uint saved = active_index;
@@ -93,7 +92,6 @@ ha_rows ha_vdb_mysql_storage::records_in_range(uint inx, key_range *min_key, key
   if (min_key) {
     uint len;
     uint parts = parts_of(inx, min_key->keypart_map, min_key->key, &len);
-    r->set_has_low(true);
     make_range_key(inx, min_key->key, len, parts, r->mutable_low());
     r->set_low_incl(min_key->flag != HA_READ_AFTER_KEY);
     r->set_low_parts(parts);
@@ -101,7 +99,6 @@ ha_rows ha_vdb_mysql_storage::records_in_range(uint inx, key_range *min_key, key
   if (max_key) {
     uint len;
     uint parts = parts_of(inx, max_key->keypart_map, max_key->key, &len);
-    r->set_has_high(true);
     make_range_key(inx, max_key->key, len, parts, r->mutable_high());
     r->set_high_incl(max_key->flag == HA_READ_AFTER_KEY);
     r->set_high_parts(parts);

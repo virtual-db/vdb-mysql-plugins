@@ -134,7 +134,7 @@ class ha_vdb_mysql_storage : public handler {
   uint identity = MAX_KEY;
   bool mirrored = false;
   std::vector<bool> idx_ordered, idx_eq;
-  std::vector<vdb::FetchMode> fetch;
+  std::vector<int> fetch;  // vdb::FetchMode per column
   std::string err_msg;
   int lock_mode = 0;  // vdb::LockMode of the current statement
   std::string pushed;

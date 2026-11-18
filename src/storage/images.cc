@@ -3,6 +3,7 @@
    the child table is opened from its share into a private TABLE (never one
    the executor is using), each row is stored with Field::store and its
    images are built with MySQL's own Field::make_sort_key. */
+#include "m_string.h"
 #include "sql/field.h"
 #include "sql/sql_base.h"
 #include "sql/sql_class.h"
@@ -11,8 +12,10 @@
 
 void vdb_compute_images(THD *thd, const vdb::ImagesNeeded &q, vdb::ImagesReply *r) {
   const std::string &db = q.database(), &name = q.name();
-  char key[MAX_DBKEY_LENGTH];
-  size_t key_length = create_table_def_key(db.c_str(), name.c_str(), key);
+  /* The table definition cache key: "db\0table\0", as sql_base.cc builds it. */
+  char key[NAME_LEN * 2 + 2];
+  size_t key_length =
+      strmake(strmake(key, db.c_str(), NAME_LEN) + 1, name.c_str(), NAME_LEN) - key + 1;
   mysql_mutex_lock(&LOCK_open);
   TABLE_SHARE *share = get_table_share(thd, db.c_str(), name.c_str(), key, key_length, false);
   mysql_mutex_unlock(&LOCK_open);

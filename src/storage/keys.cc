@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "m_ctype.h"
+#include "mysql/strings/m_ctype.h"
 #include "my_time_t.h"
 #include "sql/field.h"
 #include "sql/handler.h"

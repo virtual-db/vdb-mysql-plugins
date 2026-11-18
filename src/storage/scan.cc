@@ -218,12 +218,10 @@ int ha_vdb_mysql_storage::lookup(uint idx, const std::vector<vdb::Key> &keys, uc
 
 static void set_bound(vdb::Range *r, bool low, const vdb::Key &k, uint parts, bool incl) {
   if (low) {
-    r->set_has_low(true);
     *r->mutable_low() = k;
     r->set_low_incl(incl);
     r->set_low_parts(parts);
   } else {
-    r->set_has_high(true);
     *r->mutable_high() = k;
     r->set_high_incl(incl);
     r->set_high_parts(parts);

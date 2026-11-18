@@ -57,7 +57,7 @@ plugin)
   rm -rf "$SRC/storage/vdb"
   cp -a "$VDB_SRC" "$SRC/storage/vdb"
   cmake "$BLD" >/dev/null
-  cmake --build "$BLD" -j "$JOBS" --target vdb
+  cmake --build "$BLD" -j "$JOBS" --target vdb -- -k
   ;;
 install)
   DESTDIR="${DESTDIR:-}" cmake --install "$BLD"

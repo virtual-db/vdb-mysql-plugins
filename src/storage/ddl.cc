@@ -98,7 +98,7 @@ void vdb_table_definition(THD *thd, TABLE *t, const dd::Table *dd, vdb::TableDef
     c->set_nullable(f->is_nullable());
     c->set_virtual_gen(f->is_virtual_gcol());
     c->set_timestamp(f->type() == MYSQL_TYPE_TIMESTAMP);
-    c->set_float(f->type() == MYSQL_TYPE_FLOAT || f->type() == MYSQL_TYPE_DOUBLE);
+    c->set_float_(f->type() == MYSQL_TYPE_FLOAT || f->type() == MYSQL_TYPE_DOUBLE);
     c->set_auto_increment(f->is_flag_set(AUTO_INCREMENT_FLAG));
     if (!f->is_flag_set(NO_DEFAULT_VALUE_FLAG) && f->m_default_val_expr == nullptr && !f->is_virtual_gcol()) {
       c->set_has_default(true);

@@ -2,6 +2,8 @@
    (implementation plan doc 07 §1, D-86). */
 #include "storage/vdb/common/conn.h"
 
+#include "mysql_version.h"
+
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
