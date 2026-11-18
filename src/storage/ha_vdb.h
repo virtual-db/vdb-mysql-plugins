@@ -136,6 +136,7 @@ class ha_vdb_mysql_storage : public handler {
   std::vector<bool> idx_ordered, idx_eq;
   std::vector<int> fetch;  // vdb::FetchMode per column
   std::string err_msg;
+  uint dup_key{MAX_KEY};  // the key of the last duplicate-key error
   int lock_mode = 0;  // vdb::LockMode of the current statement
   std::string pushed;
 

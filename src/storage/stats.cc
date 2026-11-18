@@ -18,7 +18,11 @@ constexpr ha_rows kPoison = 0xDEADBEEF;
 }  // namespace
 
 int ha_vdb_mysql_storage::info(uint flag) {
-  if (flag & HA_STATUS_ERRKEY) return 0;  // errkey is set from the duplicate reply
+  /* get_dup_key() resets errkey before asking, so set it from the reply. */
+  if (flag & HA_STATUS_ERRKEY) {
+    errkey = dup_key;
+    return 0;
+  }
   if (!(flag & (HA_STATUS_VARIABLE | HA_STATUS_CONST))) return 0;
   if (tid == 0) {
     if (int e = table_open()) return e;

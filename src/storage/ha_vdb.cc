@@ -67,7 +67,7 @@ int ha_vdb_mysql_storage::fail(int rc, const vdb::Error &e) {
   if (rc < 0) return vdb_unavailable(&err_msg);
   unsigned key = 0;
   int err = vdb_ha_error(e, &err_msg, &key);
-  if (err == HA_ERR_FOUND_DUPP_KEY) errkey = key;
+  if (err == HA_ERR_FOUND_DUPP_KEY) errkey = dup_key = key;
   return err;
 }
 
@@ -197,6 +197,12 @@ void ha_vdb_mysql_storage::pick_columns(bool all) {
   for (uint i = 0; i < table_share->fields; i++) {
     Field *f = table->field[i];
     if (f->is_virtual_gcol()) continue;
-    if (all || bitmap_is_set(table->read_set, i) || bitmap_is_set(table->write_set, i)) cols.push_back(i);
+    if (all || bitmap_is_set(table->read_set, i) || bitmap_is_set(table->write_set, i)) {
+      cols.push_back(i);
+      /* Say the column was read: with HA_PARTIAL_COLUMN_READ, mysqld only
+         compares old and new rows (and reports "0 rows changed") when every
+         written column is in read_set. */
+      bitmap_set_bit(table->read_set, i);
+    }
   }
 }
