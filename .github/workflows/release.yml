@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        variant: [release, debug]
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push every release in mysql-releases.txt
+        run: |
+          arch=$(uname -m)
+          suffix=""; [ "${{ matrix.variant }}" = debug ] && suffix="-debug"
+          grep -v '^#' build/mysql-releases.txt | while read -r ver url sha; do
+            img=ghcr.io/virtual-db/vdb-mysql-plugins:${ver}-${GITHUB_REF_NAME}${suffix}-${arch}
+            docker build --build-arg MYSQL_RELEASE=$ver --build-arg VARIANT=${{ matrix.variant }} \
+              --label org.opencontainers.image.revision=${GITHUB_SHA} --target dist -t $img .
+            docker push $img
+            docker build --build-arg MYSQL_RELEASE=$ver --build-arg VARIANT=${{ matrix.variant }} --target builder -t ${img}-builder .
+            docker push ${img}-builder
+          done
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Join the architectures into one tag per release
+        run: |
+          grep -v '^#' build/mysql-releases.txt | while read -r ver url sha; do
+            for s in "" "-debug"; do
+              t=ghcr.io/virtual-db/vdb-mysql-plugins:${ver}-${GITHUB_REF_NAME}${s}
+              docker buildx imagetools create -t $t ${t}-x86_64 ${t}-aarch64
+            done
+          done

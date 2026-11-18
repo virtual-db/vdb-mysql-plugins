@@ -1,0 +1,8 @@
+{
+  "publish": {
+    "image": "virtual-db/vdb-mysql-plugins",
+    "category": "build",
+    "displayName": "VDB mysqld plug-ins",
+    "description": "MySQL-compatible mysqld 8.4 with the VDB plug-ins (vdb.so)"
+  }
+}

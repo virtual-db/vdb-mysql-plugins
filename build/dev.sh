@@ -26,6 +26,21 @@ server)
     exit 1' ;;
 plugin)
   run '/vdb/build/build.sh plugin' ;;
+dist)
+  # Install into the volume, copy the prefix out, and wrap it in an image
+  # (vdb-mysql-plugins:dev) for vdb-tests and the vdb-mysql image.
+  run 'set -e; rm -rf /work/install; DESTDIR=/work/install /vdb/build/build.sh install
+    mkdir -p /work/install/usr/local/mysql/share/vdb
+    cp /vdb/build/../COPYING /work/install/usr/local/mysql/share/vdb/COPYING 2>/dev/null || true
+    cat /work/mysql/.vdb-release > /work/install/usr/local/mysql/share/vdb/release'
+  out="$HOME/.cache/vdb/dist"
+  rm -rf "$out" && mkdir -p "$out"
+  cid=$(docker create -v "$VOL":/work "$IMAGE" true)
+  docker cp "$cid":/work/install/usr/local/mysql "$out/mysql"
+  docker rm "$cid" >/dev/null
+  cp COPYING docs/source-offer.md "$out/mysql/share/vdb/"
+  printf 'FROM scratch\nCOPY mysql /usr/local/mysql\n' > "$out/Dockerfile"
+  docker build -q -t vdb-mysql-plugins:dev "$out" ;;
 shell)
   docker run --rm -it -v "$VOL":/work -v "$PWD/src":/vdb/src:ro "$IMAGE" bash ;;
 esac

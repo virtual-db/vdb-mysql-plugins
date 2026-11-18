@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo apt-get install -y clang-format
+      - name: clang-format (Google style, as MySQL's tree)
+        run: find src -name '*.cc' -o -name '*.h' | xargs clang-format --style=Google --dry-run --Werror --ColumnLimit=120
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Incremental vdb.so on the builder image
+        run: |
+          docker build --target builder \
+            --cache-from ghcr.io/virtual-db/vdb-mysql-plugins:8.4.11-builder -t builder .
+      - name: Smoke test: mysqld loads vdb.so and reports four plug-ins
+        run: |
+          docker build --target installed -t installed .
+          docker run --rm installed sh -c '
+            /usr/local/mysql/bin/mysqld --no-defaults --initialize-insecure --datadir=/tmp/d --user=root &&
+            (/usr/local/mysql/bin/mysqld --no-defaults --datadir=/tmp/d --user=root --plugin-load-add=vdb.so --socket=/tmp/s &)
+            sleep 15 && /usr/local/mysql/bin/mysql -uroot -S /tmp/s -N -e "SELECT COUNT(*) FROM information_schema.PLUGINS WHERE PLUGIN_NAME LIKE '\''vdb_mysql_%'\'' AND PLUGIN_STATUS='\''ACTIVE'\''" | grep -x 4'

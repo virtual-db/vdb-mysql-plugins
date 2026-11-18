@@ -35,9 +35,15 @@ COPY src/ /vdb/src/
 RUN /vdb/build/build.sh plugin
 
 FROM builder AS installed
-RUN DESTDIR=/out /vdb/build/build.sh install
+ARG MYSQL_RELEASE=
+RUN DESTDIR=/out /vdb/build/build.sh install \
+    && mkdir -p /out/usr/local/mysql/share/vdb \
+    && cat /work/mysql/.vdb-release > /out/usr/local/mysql/share/vdb/release
 
 FROM scratch AS dist
 COPY --from=installed /out/usr/local/mysql /usr/local/mysql
 COPY COPYING /usr/local/mysql/share/vdb/COPYING
 COPY docs/source-offer.md /usr/local/mysql/share/vdb/source-offer.md
+
+# The debug variant is the same stages built with --build-arg VARIANT=debug;
+# release.yml publishes it as <mysql>-<ver>-debug.
