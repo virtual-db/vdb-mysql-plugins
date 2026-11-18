@@ -79,16 +79,19 @@ void vdb_table_definition(THD *thd, TABLE *t, const dd::Table *dd, vdb::TableDef
   out->set_name(s->table_name.str, s->table_name.length);
   Table_ref tl(t, s->db.str, s->db.length, s->table_name.str, s->table_name.length, s->table_name.str, TL_READ);
   String text;
-  if (!store_create_info(thd, &tl, &text, nullptr, false, true)) out->set_definition(text.ptr(), text.length());
+  if (!store_create_info(thd, &tl, &text, nullptr, false, true) && text.length() > 0)
+    out->set_definition(text.ptr(), text.length());
   my_bitmap_map *old = dbug_tmp_use_all_columns(t, t->read_set);
   ptrdiff_t defoff = s->default_values - t->record[0];
   for (uint i = 0; i < s->fields; i++) {
     Field *f = t->field[i];
     vdb::ColumnDef *c = out->add_columns();
     c->set_name(f->field_name);
-    String type;
+    char tbuf[MAX_FIELD_WIDTH];
+    String type(tbuf, sizeof(tbuf), system_charset_info);
+    type.length(0);
     f->sql_type(type);
-    c->set_type(type.ptr(), type.length());
+    if (type.length() > 0) c->set_type(type.ptr(), type.length());
     if (f->has_charset()) {
       c->set_charset(f->charset()->csname);
       c->set_collation(f->charset()->m_coll_name);
