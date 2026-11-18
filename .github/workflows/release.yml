@@ -1,3 +1,9 @@
+# release.yml: the deploy pipeline. A tag vX.Y.Z runs CI, then builds and
+# pushes, for every release in build/mysql-releases.txt, both architectures and
+# both variants:
+#   ghcr.io/virtual-db/vdb-mysql-plugins:<mysqld>-vX.Y.Z[-debug]          (dist)
+#   ghcr.io/virtual-db/vdb-mysql-plugins:<mysqld>-vX.Y.Z[-debug]-<arch>-builder
+# vdb-mysql pins the dist tag in its Dockerfile (PLUGINS_IMAGE).
 name: Release
 
 on:
@@ -6,7 +12,12 @@ on:
       - 'v*.*.*'
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   build:
+    needs: ci
     strategy:
       matrix:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]
@@ -28,7 +39,8 @@ jobs:
           grep -v '^#' build/mysql-releases.txt | while read -r ver url sha; do
             img=ghcr.io/virtual-db/vdb-mysql-plugins:${ver}-${GITHUB_REF_NAME}${suffix}-${arch}
             docker build --build-arg MYSQL_RELEASE=$ver --build-arg VARIANT=${{ matrix.variant }} \
-              --label org.opencontainers.image.revision=${GITHUB_SHA} --target dist -t $img .
+              --label org.opencontainers.image.revision=${GITHUB_SHA} --target dist -t $img \
+              --cache-from type=registry,ref=ghcr.io/virtual-db/vdb-mysql-plugins:buildcache .
             docker push $img
             docker build --build-arg MYSQL_RELEASE=$ver --build-arg VARIANT=${{ matrix.variant }} --target builder -t ${img}-builder .
             docker push ${img}-builder
