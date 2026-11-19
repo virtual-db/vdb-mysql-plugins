@@ -33,9 +33,8 @@ static SHOW_VAR vdb_storage_status[] = {VDB_STAT(requests),
                                         VDB_STAT(lock_waits),
                                         VDB_STAT(order_violations),
                                         {nullptr, nullptr, SHOW_UNDEF, SHOW_SCOPE_UNDEF}};
-static SHOW_VAR vdb_statements_status[] = {VDB_STAT(events_dropped),
-                                           VDB_STAT(rewrites),
-                                           {nullptr, nullptr, SHOW_UNDEF, SHOW_SCOPE_UNDEF}};
+static SHOW_VAR vdb_statements_status[] = {
+    VDB_STAT(events_dropped), VDB_STAT(rewrites), {nullptr, nullptr, SHOW_UNDEF, SHOW_SCOPE_UNDEF}};
 
 mysql_declare_plugin(vdb){
     MYSQL_STORAGE_ENGINE_PLUGIN,

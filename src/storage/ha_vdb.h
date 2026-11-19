@@ -84,9 +84,8 @@ class ha_vdb_mysql_storage : public handler {
   int read_range_first(const key_range *start_key, const key_range *end_key, bool eq_range, bool sorted) override;
 
   /* ── mrr.cc ── */
-  ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq, void *seq_init_param, uint n_ranges,
-                                      uint *bufsz, uint *flags, bool *force_default_mrr,
-                                      Cost_estimate *cost) override;
+  ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq, void *seq_init_param, uint n_ranges, uint *bufsz,
+                                      uint *flags, bool *force_default_mrr, Cost_estimate *cost) override;
   ha_rows multi_range_read_info(uint keyno, uint n_ranges, uint keys, uint *bufsz, uint *flags,
                                 Cost_estimate *cost) override;
   int multi_range_read_init(RANGE_SEQ_IF *seq, void *seq_init_param, uint n_ranges, uint mode,
@@ -116,8 +115,7 @@ class ha_vdb_mysql_storage : public handler {
   enum_alter_inplace_result check_if_supported_inplace_alter(TABLE *altered, Alter_inplace_info *ai) override;
   bool prepare_inplace_alter_table(TABLE *altered, Alter_inplace_info *ai, const dd::Table *old_dd,
                                    dd::Table *new_dd) override;
-  bool inplace_alter_table(TABLE *altered, Alter_inplace_info *ai, const dd::Table *old_dd,
-                           dd::Table *new_dd) override;
+  bool inplace_alter_table(TABLE *altered, Alter_inplace_info *ai, const dd::Table *old_dd, dd::Table *new_dd) override;
   bool commit_inplace_alter_table(TABLE *altered, Alter_inplace_info *ai, bool commit, const dd::Table *old_dd,
                                   dd::Table *new_dd) override;
 
@@ -137,7 +135,7 @@ class ha_vdb_mysql_storage : public handler {
   std::vector<int> fetch;  // vdb::FetchMode per column
   std::string err_msg;
   uint dup_key{MAX_KEY};  // the key of the last duplicate-key error
-  int lock_mode = 0;  // vdb::LockMode of the current statement
+  int lock_mode = 0;      // vdb::LockMode of the current statement
   std::string pushed;
 
   /* The current scan. */

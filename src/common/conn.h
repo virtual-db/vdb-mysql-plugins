@@ -26,8 +26,7 @@ class Vdb_conn {
   /* Send a request and read its reply. Returns 0 on success, 1 when
      vdb-mysql replied with an error (in *err), -1 when the connection failed
      (it is then closed; the next statement reconnects). */
-  int call(uint8_t op, const google::protobuf::MessageLite &req, google::protobuf::MessageLite *reply,
-           vdb::Error *err);
+  int call(uint8_t op, const google::protobuf::MessageLite &req, google::protobuf::MessageLite *reply, vdb::Error *err);
 
   /* Send a frame with no reply (Event). Returns false on failure. */
   bool send(uint8_t op, const google::protobuf::MessageLite &req);

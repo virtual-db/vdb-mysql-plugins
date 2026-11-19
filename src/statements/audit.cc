@@ -32,19 +32,19 @@ struct st_mysql_audit vdb_statements_descriptor = {
     nullptr,
     vdb_event_notify,
     {
-        0,                                                                          /* GENERAL */
+        0,                                                                                              /* GENERAL */
         static_cast<unsigned long>(MYSQL_AUDIT_CONNECTION_CONNECT | MYSQL_AUDIT_CONNECTION_DISCONNECT), /* CONNECTION */
-        static_cast<unsigned long>(MYSQL_AUDIT_PARSE_PREPARSE),                    /* PARSE */
-        0,                                                                          /* AUTHORIZATION */
-        0,                                                                          /* TABLE_ACCESS */
-        0,                                                                          /* GLOBAL_VARIABLE */
-        0,                                                                          /* SERVER_STARTUP */
-        0,                                                                          /* SERVER_SHUTDOWN */
-        0,                                                                          /* COMMAND */
+        static_cast<unsigned long>(MYSQL_AUDIT_PARSE_PREPARSE),                                         /* PARSE */
+        0,                                                                                  /* AUTHORIZATION */
+        0,                                                                                  /* TABLE_ACCESS */
+        0,                                                                                  /* GLOBAL_VARIABLE */
+        0,                                                                                  /* SERVER_STARTUP */
+        0,                                                                                  /* SERVER_SHUTDOWN */
+        0,                                                                                  /* COMMAND */
         static_cast<unsigned long>(MYSQL_AUDIT_QUERY_START | MYSQL_AUDIT_QUERY_STATUS_END), /* QUERY */
-        0,                                                                          /* STORED_PROGRAM */
-        0,                                                                          /* AUTHENTICATION */
-        0,                                                                          /* MESSAGE */
+        0,                                                                                  /* STORED_PROGRAM */
+        0,                                                                                  /* AUTHENTICATION */
+        0,                                                                                  /* MESSAGE */
     }};
 
 int vdb_statements_init(void *) {

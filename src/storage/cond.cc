@@ -37,7 +37,8 @@ bool cache_literal(Item_cache *c, std::string *lit) {
   switch (c->result_type()) {
     case INT_RESULT: {
       longlong x = c->val_int();
-      *lit = c->null_value ? "NULL" : (c->unsigned_flag ? std::to_string(static_cast<ulonglong>(x)) : std::to_string(x));
+      *lit =
+          c->null_value ? "NULL" : (c->unsigned_flag ? std::to_string(static_cast<ulonglong>(x)) : std::to_string(x));
       return true;
     }
     case DECIMAL_RESULT: {
@@ -71,8 +72,7 @@ bool cache_literal(Item_cache *c, std::string *lit) {
 }
 
 void collect(THD *thd, const Item *cond, table_map self, std::string *out) {
-  if (cond->type() == Item::COND_ITEM &&
-      down_cast<const Item_cond *>(cond)->functype() == Item_func::COND_AND_FUNC) {
+  if (cond->type() == Item::COND_ITEM && down_cast<const Item_cond *>(cond)->functype() == Item_func::COND_AND_FUNC) {
     for (const Item &i : *const_cast<Item_cond *>(down_cast<const Item_cond *>(cond))->argument_list())
       collect(thd, &i, self, out);
     return;

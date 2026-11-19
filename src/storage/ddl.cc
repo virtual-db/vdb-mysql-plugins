@@ -222,22 +222,20 @@ namespace {
 using F = Alter_inplace_info;
 const F::HA_ALTER_FLAGS kInstant = F::ALTER_COLUMN_DEFAULT | F::ADD_FOREIGN_KEY | F::DROP_FOREIGN_KEY |
                                    F::RENAME_INDEX | F::ALTER_INDEX_COMMENT | F::CHANGE_CREATE_OPTION |
-                                   F::ADD_CHECK_CONSTRAINT | F::DROP_CHECK_CONSTRAINT |
-                                   F::SUSPEND_CHECK_CONSTRAINT | F::ALTER_COLUMN_VISIBILITY;
+                                   F::ADD_CHECK_CONSTRAINT | F::DROP_CHECK_CONSTRAINT | F::SUSPEND_CHECK_CONSTRAINT |
+                                   F::ALTER_COLUMN_VISIBILITY;
 /* Changes that keep the Source's columns but reshape the Delta's rows. */
-const F::HA_ALTER_FLAGS kReshape = F::ADD_INDEX | F::DROP_INDEX | F::ADD_UNIQUE_INDEX | F::DROP_UNIQUE_INDEX |
-                                   F::ADD_VIRTUAL_COLUMN | F::ADD_STORED_BASE_COLUMN |
-                                   F::ADD_STORED_GENERATED_COLUMN | F::ADD_COLUMN | F::DROP_VIRTUAL_COLUMN |
-                                   F::DROP_STORED_COLUMN | F::DROP_COLUMN | F::ALTER_VIRTUAL_COLUMN_ORDER |
-                                   F::ALTER_STORED_COLUMN_ORDER | F::ALTER_COLUMN_EQUAL_PACK_LENGTH |
-                                   F::ALTER_VIRTUAL_GCOL_EXPR | F::VIRTUAL_GCOL_REEVAL;
+const F::HA_ALTER_FLAGS kReshape =
+    F::ADD_INDEX | F::DROP_INDEX | F::ADD_UNIQUE_INDEX | F::DROP_UNIQUE_INDEX | F::ADD_VIRTUAL_COLUMN |
+    F::ADD_STORED_BASE_COLUMN | F::ADD_STORED_GENERATED_COLUMN | F::ADD_COLUMN | F::DROP_VIRTUAL_COLUMN |
+    F::DROP_STORED_COLUMN | F::DROP_COLUMN | F::ALTER_VIRTUAL_COLUMN_ORDER | F::ALTER_STORED_COLUMN_ORDER |
+    F::ALTER_COLUMN_EQUAL_PACK_LENGTH | F::ALTER_VIRTUAL_GCOL_EXPR | F::VIRTUAL_GCOL_REEVAL;
 /* Changes a client may not make on a table read from the Source (D-45). */
-const F::HA_ALTER_FLAGS kSourceOnly = F::ALTER_COLUMN_NAME | F::ALTER_STORED_COLUMN_TYPE |
-                                      F::ALTER_VIRTUAL_COLUMN_TYPE | F::ADD_PK_INDEX | F::DROP_PK_INDEX |
-                                      F::ALTER_COLUMN_NULLABLE | F::ALTER_COLUMN_NOT_NULLABLE |
-                                      F::ALTER_COLUMN_INDEX_LENGTH | F::ALTER_STORED_GCOL_EXPR |
-                                      F::STORED_GCOL_REEVAL | F::ALTER_COLUMN_STORAGE_TYPE |
-                                      F::ALTER_COLUMN_COLUMN_FORMAT | F::CHANGE_INDEX_OPTION;
+const F::HA_ALTER_FLAGS kSourceOnly =
+    F::ALTER_COLUMN_NAME | F::ALTER_STORED_COLUMN_TYPE | F::ALTER_VIRTUAL_COLUMN_TYPE | F::ADD_PK_INDEX |
+    F::DROP_PK_INDEX | F::ALTER_COLUMN_NULLABLE | F::ALTER_COLUMN_NOT_NULLABLE | F::ALTER_COLUMN_INDEX_LENGTH |
+    F::ALTER_STORED_GCOL_EXPR | F::STORED_GCOL_REEVAL | F::ALTER_COLUMN_STORAGE_TYPE | F::ALTER_COLUMN_COLUMN_FORMAT |
+    F::CHANGE_INDEX_OPTION;
 
 void kinds(F::HA_ALTER_FLAGS f, vdb::Alter *m) {
   if (f & (F::ADD_COLUMN | F::ADD_VIRTUAL_COLUMN | F::ADD_STORED_BASE_COLUMN | F::ADD_STORED_GENERATED_COLUMN))
@@ -285,8 +283,9 @@ enum_alter_inplace_result ha_vdb_mysql_storage::check_if_supported_inplace_alter
   if (f & ~(kInstant | kReshape | kSourceOnly)) return HA_ALTER_INPLACE_NOT_SUPPORTED;
   if (tid == 0 && begin(ha_thd()) != 0) return HA_ALTER_ERROR;
   if ((f & kSourceOnly) && mirrored && !vdb_is_control(ha_thd())) {
-    err_msg = "VDB: renaming a column, changing its type or changing the primary key of a table read from the "
-              "Source needs a table copy, which VDB refuses (D-45)";
+    err_msg =
+        "VDB: renaming a column, changing its type or changing the primary key of a table read from the "
+        "Source needs a table copy, which VDB refuses (D-45)";
     my_error(ER_GET_ERRMSG, MYF(0), HA_ERR_VDB, err_msg.c_str(), "vdb_mysql_storage");
     return HA_ALTER_ERROR;
   }
@@ -333,8 +332,7 @@ bool ha_vdb_mysql_storage::prepare_inplace_alter_table(TABLE *altered, Alter_inp
 
 /* Convert every Delta row from the old layout to the new one with MySQL's
    own conversion rules (product doc 09 §5.1), and recompute its images. */
-bool ha_vdb_mysql_storage::inplace_alter_table(TABLE *altered, Alter_inplace_info *ai, const dd::Table *,
-                                               dd::Table *) {
+bool ha_vdb_mysql_storage::inplace_alter_table(TABLE *altered, Alter_inplace_info *ai, const dd::Table *, dd::Table *) {
   if (!convert) return false;
   int err = 0;
   Vdb_conn *c = conn(&err);

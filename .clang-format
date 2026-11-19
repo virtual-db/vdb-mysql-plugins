@@ -1,0 +1,9 @@
+# C++ style for src/, checked by CI's Lint job with the clang-format version
+# pinned in .github/workflows/ci.yml. Google style as MySQL's own tree
+# (pointers bind to the name), 120 columns. Includes keep their written
+# order: MySQL headers depend on it.
+BasedOnStyle: Google
+ColumnLimit: 120
+DerivePointerAlignment: false
+PointerAlignment: Right
+SortIncludes: Never

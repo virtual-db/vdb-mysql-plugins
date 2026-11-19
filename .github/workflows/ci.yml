@@ -1,6 +1,6 @@
 # ci.yml: Lint and Test on pull requests and on main; the job names are the
 # status checks main's branch protection requires.
-#   Lint  clang-format, Google style as MySQL's tree
+#   Lint  clang-format (pinned version) against .clang-format
 #   Test  builds mysqld 8.4 and vdb.so, then checks mysqld loads vdb.so with
 #         four ACTIVE plug-ins. The mysqld build is cached in the registry, so
 #         only a change under build/ recompiles it; src/ changes rebuild vdb.so.
@@ -21,9 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: sudo apt-get install -y clang-format
+      # Pinned so the check does not move with the runner image's clang-format.
+      # Format locally with the same version: pip install clang-format==21.1.6
+      - run: pipx install clang-format==21.1.6
       - name: clang-format
-        run: find src -name '*.cc' -o -name '*.h' | xargs clang-format --style=Google --dry-run --Werror --ColumnLimit=120
+        run: find src -name '*.cc' -o -name '*.h' | xargs clang-format --style=file --dry-run --Werror
 
   test:
     name: Test
@@ -53,7 +55,10 @@ jobs:
             --cache-from "type=registry,ref=$CACHE" "${push[@]}" --load -t installed
       - name: mysqld loads vdb.so and reports four ACTIVE plug-ins
         run: |
+          # The installed stage stages the prefix under /out (DESTDIR); put it
+          # where mysqld was configured to live so it finds its plugin dir.
           docker run --rm installed sh -c '
+            cp -a /out/usr/local/mysql /usr/local/ &&
             /usr/local/mysql/bin/mysqld --no-defaults --initialize-insecure --datadir=/tmp/d --user=root &&
             (/usr/local/mysql/bin/mysqld --no-defaults --datadir=/tmp/d --user=root --plugin-load-add=vdb.so --socket=/tmp/s &)
             for i in $(seq 60); do /usr/local/mysql/bin/mysqladmin -uroot -S /tmp/s ping >/dev/null 2>&1 && break; sleep 1; done

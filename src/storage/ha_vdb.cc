@@ -13,10 +13,10 @@
 #include "storage/vdb/common/errors.h"
 #include "storage/vdb/common/session.h"
 
-unsigned long long vdb_st_requests, vdb_st_rows_received, vdb_st_rows_sent, vdb_st_bytes_received,
-    vdb_st_lock_waits, vdb_st_order_violations;
+unsigned long long vdb_st_requests, vdb_st_rows_received, vdb_st_rows_sent, vdb_st_bytes_received, vdb_st_lock_waits,
+    vdb_st_order_violations;
 
-void vdb_report_wait(THD *thd, uint64_t holder);  // lockwait.cc
+void vdb_report_wait(THD *thd, uint64_t holder);                                     // lockwait.cc
 void vdb_compute_images(THD *thd, const vdb::ImagesNeeded &q, vdb::ImagesReply *r);  // images.cc
 
 handler *vdb_create_handler(handlerton *hton, TABLE_SHARE *table, bool, MEM_ROOT *mem_root) {
@@ -32,8 +32,8 @@ ha_vdb_mysql_storage::~ha_vdb_mysql_storage() { my_free(scratch); }
 /* The primary key or identity is the row reference; ordered and reverse
    index reads only on indexes whose collation is proven for order (D-59). */
 ulonglong ha_vdb_mysql_storage::table_flags() const {
-  return HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE | HA_PARTIAL_COLUMN_READ | HA_NULL_IN_KEY |
-         HA_CAN_INDEX_BLOBS | HA_GENERATED_COLUMNS;
+  return HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE | HA_PARTIAL_COLUMN_READ | HA_NULL_IN_KEY | HA_CAN_INDEX_BLOBS |
+         HA_GENERATED_COLUMNS;
 }
 
 ulong ha_vdb_mysql_storage::index_flags(uint idx, uint, bool) const {
@@ -157,7 +157,7 @@ int ha_vdb_mysql_storage::external_lock(THD *thd, int lock_type) {
 }
 
 int ha_vdb_mysql_storage::start_stmt(THD *thd, thr_lock_type lt) {
-  lock_mode = lt >= TL_WRITE_ALLOW_WRITE ? vdb::LOCK_EXCLUSIVE
+  lock_mode = lt >= TL_WRITE_ALLOW_WRITE        ? vdb::LOCK_EXCLUSIVE
               : lt == TL_READ_WITH_SHARED_LOCKS ? vdb::LOCK_SHARED
                                                 : vdb::LOCK_NONE;
   return begin(thd);

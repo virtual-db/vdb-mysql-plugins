@@ -10,7 +10,6 @@ int vdb_relay_authenticate(MYSQL_PLUGIN_VIO *vio, MYSQL_SERVER_AUTH_INFO *info, 
 
 int vdb_auth_generate(char *outbuf, unsigned int *outbuflen, const char *inbuf, unsigned int inbuflen);
 int vdb_auth_validate(char *const inbuf, unsigned int buflen);
-int vdb_auth_set_salt(const char *password, unsigned int password_len, unsigned char *salt,
-                      unsigned char *salt_len);
+int vdb_auth_set_salt(const char *password, unsigned int password_len, unsigned char *salt, unsigned char *salt_len);
 
 #endif

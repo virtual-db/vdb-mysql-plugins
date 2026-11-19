@@ -115,9 +115,7 @@ ha_rows ha_vdb_mysql_storage::records_in_range(uint inx, key_range *min_key, key
 }
 
 /* The cost of a scan: batches of rows, each a measured round trip. */
-double ha_vdb_mysql_storage::scan_time() {
-  return static_cast<double>(stats.records) / 4096.0 * batch_cost + 2;
-}
+double ha_vdb_mysql_storage::scan_time() { return static_cast<double>(stats.records) / 4096.0 * batch_cost + 2; }
 
 double ha_vdb_mysql_storage::read_time(uint, uint ranges, ha_rows rows) {
   return static_cast<double>(ranges) * batch_cost + static_cast<double>(rows) / 1000.0;
