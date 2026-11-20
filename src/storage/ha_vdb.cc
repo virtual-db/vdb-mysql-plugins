@@ -123,6 +123,7 @@ int ha_vdb_mysql_storage::open(const char *, int, uint, const dd::Table *) {
 
 int ha_vdb_mysql_storage::close() {
   scan_close();
+  blob_store.clear();
   return 0;
 }
 

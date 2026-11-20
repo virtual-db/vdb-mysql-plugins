@@ -49,6 +49,7 @@ int ha_vdb_mysql_storage::decode_row(const vdb::Row &row, uchar *buf) {
         f->store_timestamp(&tv);
       } else {
         f->store(v.b().data(), v.b().size(), f->charset());
+        if (f->is_flag_set(BLOB_FLAG)) keep_blob(down_cast<Field_blob *>(f), buf, cols[i]);
       }
     }
     f->move_field_offset(-off);
@@ -56,6 +57,20 @@ int ha_vdb_mysql_storage::decode_row(const vdb::Row &row, uchar *buf) {
   dbug_tmp_restore_column_map(table->write_set, old);
   vdb_bump(vdb_st_rows_received);
   return 0;
+}
+
+/* A BLOB, TEXT or JSON field stores its value in a buffer the Field object
+   owns, and the record only points to it, so every record decoded through
+   the same Field would point to the last value stored. Copy the value into
+   storage kept per record buffer and field, and point the record there, so
+   record[0] and record[1] (and any other buffer) keep their own values.
+   The copy lives until the next row is decoded into the same buffer. */
+void ha_vdb_mysql_storage::keep_blob(Field_blob *b, const uchar *buf, uint32_t field) {
+  std::vector<std::string> &slots = blob_store[buf];
+  if (slots.size() <= field) slots.resize(table->s->fields);
+  const uint32 len = b->get_length();
+  slots[field].assign(reinterpret_cast<const char *>(b->get_blob_data()), len);
+  b->set_ptr(len, reinterpret_cast<const uchar *>(slots[field].data()));
 }
 
 /* Encode fields of a record as text values. */

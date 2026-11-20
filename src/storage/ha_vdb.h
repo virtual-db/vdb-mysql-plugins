@@ -7,6 +7,7 @@
 #define VDB_STORAGE_HA_VDB_H
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "my_base.h"
@@ -39,6 +40,8 @@ struct Vdb_rows {
 extern unsigned long long vdb_st_requests, vdb_st_rows_received, vdb_st_rows_sent, vdb_st_bytes_received,
     vdb_st_lock_waits, vdb_st_order_violations;
 inline void vdb_bump(unsigned long long &c, unsigned long long n = 1) { __atomic_add_fetch(&c, n, __ATOMIC_RELAXED); }
+
+class Field_blob;
 
 class ha_vdb_mysql_storage : public handler {
  public:
@@ -170,6 +173,9 @@ class ha_vdb_mysql_storage : public handler {
 
   uchar *scratch = nullptr;  // a record buffer for keys and images
 
+  /* Values of BLOB, TEXT and JSON fields, per record buffer and field. */
+  std::unordered_map<const uchar *, std::vector<std::string>> blob_store;
+
   /* ── helpers (ha_vdb.cc, rows.cc, keys.cc, scan.cc) ── */
   Vdb_conn *conn(int *err);
   int begin(THD *thd);
@@ -178,6 +184,7 @@ class ha_vdb_mysql_storage : public handler {
   void pick_columns(bool all);
   void wire_callbacks(Vdb_conn *c);
   int decode_row(const vdb::Row &row, uchar *buf);
+  void keep_blob(Field_blob *b, const uchar *buf, uint32_t field);
   void encode_row(const uchar *rec, vdb::Row *out);
   void encode_fields(const uchar *rec, const std::vector<Field *> &fs, vdb::Row *out);
   std::string key_image(uint idx, const uchar *rec, uint parts);
