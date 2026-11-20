@@ -2,15 +2,15 @@
 # status checks main's branch protection requires.
 #   Lint  clang-format (pinned version) against .clang-format
 #   Test  builds mysqld 8.4 and vdb.so, then checks mysqld loads vdb.so with
-#         four ACTIVE plug-ins. The mysqld build is cached in the registry, so
-#         only a change under build/ recompiles it; src/ changes rebuild vdb.so.
+#         four ACTIVE plug-ins. The mysqld build is cached in the registry (written
+#         with GITHUB_TOKEN), so only a change under build/ recompiles it; src/
+#         changes rebuild vdb.so. This repository publishes no image (D-91).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  workflow_call:
 
 env:
   CACHE: ghcr.io/virtual-db/vdb-mysql-plugins:buildcache

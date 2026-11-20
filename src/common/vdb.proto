@@ -8,7 +8,7 @@ syntax = "proto3";
 
 package vdb;
 
-option go_package = "github.com/virtual-db/vdb-mysql/protocol";
+option go_package = "github.com/virtual-db/vdb-mysql-engine/protocol";
 option optimize_for = LITE_RUNTIME;
 
 // ── Logical types (doc 07 §2) ──

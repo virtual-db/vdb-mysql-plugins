@@ -21,8 +21,9 @@ build/dev.sh plugin   # after a change in src/: rebuild vdb.so only
 build/dev.sh dist     # wrap the installed prefix as the image vdb-mysql-plugins:dev
 ```
 
-Release images are built by `.github/workflows/release.yml` from the `Dockerfile` (`toolchain`, `server`, `builder`,
-`installed`, `dist`), for every release in `build/mysql-releases.txt` and both architectures. See `docs/building.md`.
+This repository publishes no image. `vdb-mysql` builds the environment image from this source at a pinned ref and
+publishes it after the oracle passes (D-91). The `Dockerfile` here (`toolchain`, `server`, `installed`) serves CI and
+local work. See `docs/building.md`.
 
 ## Licence
 
