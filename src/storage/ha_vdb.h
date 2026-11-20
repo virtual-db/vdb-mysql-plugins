@@ -185,6 +185,7 @@ class ha_vdb_mysql_storage : public handler {
   void wire_callbacks(Vdb_conn *c);
   int decode_row(const vdb::Row &row, uchar *buf);
   void keep_blob(Field_blob *b, const uchar *buf, uint32_t field);
+  void detach_blob(Field_blob *b, uint32_t field);
   void encode_row(const uchar *rec, vdb::Row *out);
   void encode_fields(const uchar *rec, const std::vector<Field *> &fs, vdb::Row *out);
   std::string key_image(uint idx, const uchar *rec, uint parts);

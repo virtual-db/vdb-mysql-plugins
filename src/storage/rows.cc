@@ -48,6 +48,11 @@ int ha_vdb_mysql_storage::decode_row(const vdb::Row &row, uchar *buf) {
         my_timeval tv = parse_unix(v.b());
         f->store_timestamp(&tv);
       } else {
+        if (f->is_flag_set(BLOB_FLAG) && buf != table->record[0]) {
+          f->move_field_offset(-off);
+          detach_blob(down_cast<Field_blob *>(f), cols[i]);
+          f->move_field_offset(off);
+        }
         f->store(v.b().data(), v.b().size(), f->charset());
         if (f->is_flag_set(BLOB_FLAG)) keep_blob(down_cast<Field_blob *>(f), buf, cols[i]);
       }
@@ -65,6 +70,21 @@ int ha_vdb_mysql_storage::decode_row(const vdb::Row &row, uchar *buf) {
    storage kept per record buffer and field, and point the record there, so
    record[0] and record[1] (and any other buffer) keep their own values.
    The copy lives until the next row is decoded into the same buffer. */
+/* Before a value is decoded into another buffer through the same Field,
+   give record[0]'s value its own copy: mysqld may have stored the row it is
+   writing there (REPLACE reads the conflicting row into record[1] while
+   record[0] holds the new row), and that value lives in the Field's buffer
+   the store is about to overwrite. The Field points at record[0] here. */
+void ha_vdb_mysql_storage::detach_blob(Field_blob *b, uint32_t field) {
+  const uint32 len = b->get_length();
+  if (len == 0) return;
+  std::string copy(reinterpret_cast<const char *>(b->get_blob_data()), len);
+  std::vector<std::string> &slots = blob_store[table->record[0]];
+  if (slots.size() <= field) slots.resize(table->s->fields);
+  slots[field] = std::move(copy);
+  b->set_ptr(len, reinterpret_cast<const uchar *>(slots[field].data()));
+}
+
 void ha_vdb_mysql_storage::keep_blob(Field_blob *b, const uchar *buf, uint32_t field) {
   std::vector<std::string> &slots = blob_store[buf];
   if (slots.size() <= field) slots.resize(table->s->fields);
