@@ -1,0 +1,33 @@
+name: MySQL releases
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Look for a newer 8.4 patch release
+        run: |
+          cur=$(grep -v '^#' build/mysql-releases.txt | head -1 | awk '{print $1}')
+          patch=${cur##*.}
+          next="8.4.$((patch + 1))"
+          url="https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-${next}.tar.gz"
+          if curl -fsIL "$url" >/dev/null; then
+            sha=$(curl -fsSL "$url" | sha256sum | awk '{print $1}')
+            sed -i "/^# The first line/a ${next} ${url} ${sha}" build/mysql-releases.txt
+            echo "NEXT=${next}" >> $GITHUB_ENV
+          fi
+      - uses: peter-evans/create-pull-request@v7
+        if: env.NEXT != ''
+        with:
+          branch: chore/mysql-${{ env.NEXT }}
+          title: "build: add mysqld ${{ env.NEXT }}"
+          commit-message: "build: add mysqld ${{ env.NEXT }}"
+          body: "The full plug-in suites must pass on this release before it merges (product doc 15 §1.1)."
