@@ -132,6 +132,7 @@ int ha_vdb_mysql_storage::extra(enum ha_extra_function) { return 0; }
 int ha_vdb_mysql_storage::reset() {
   pushed.clear();
   pos_rows.clear();
+  pos_index.clear();
   pos_refs.clear();
   return 0;
 }

@@ -149,13 +149,27 @@ int ha_vdb_mysql_storage::rnd_next(uchar *buf) {
 int ha_vdb_mysql_storage::rnd_end() { return scan_close(); }
 
 /* A position is an index into this statement's saved rows: the row with
-   every column and the reference update_row and delete_row send back. */
+   every column and the reference update_row and delete_row send back. The
+   same row always gets the same position, because mysqld compares positions
+   to find duplicates (semi-join duplicate weedout, DISTINCT by row id).
+   Rows of a table without a usable key (D-10) can be identical, so each of
+   their calls gets a new position. */
 void ha_vdb_mysql_storage::position(const uchar *record) {
   vdb::Row r;
   encode_row(record, &r);
-  uint64_t n = pos_rows.size();
-  pos_rows.push_back(r.SerializeAsString());
-  pos_refs.push_back(cur_ref);
+  const std::string key = cur_ref.SerializeAsString();
+  uint64_t n;
+  const bool keyed = !cur_ref.has_whole() || !cur_ref.pk().image().empty();
+  auto it = keyed ? pos_index.find(key) : pos_index.end();
+  if (it != pos_index.end()) {
+    n = it->second;
+    pos_rows[n] = r.SerializeAsString();
+  } else {
+    n = pos_rows.size();
+    pos_rows.push_back(r.SerializeAsString());
+    pos_refs.push_back(cur_ref);
+    if (keyed) pos_index.emplace(key, n);
+  }
   memcpy(ref, &n, sizeof(n));
 }
 

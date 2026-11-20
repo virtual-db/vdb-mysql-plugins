@@ -164,6 +164,7 @@ class ha_vdb_mysql_storage : public handler {
   /* Positions of this statement: a record copy and its reference. */
   std::vector<std::string> pos_rows;
   std::vector<vdb::RowRef> pos_refs;
+  std::unordered_map<std::string, uint64_t> pos_index;  // row reference to position
 
   /* Bulk insert and MRR. */
   bool bulk = false;
