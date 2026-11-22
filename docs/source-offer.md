@@ -10,4 +10,4 @@ General Public License version 2 (`COPYING`).
 
 On request, for three years from the date you received this image, we provide the complete corresponding source
 code on a medium customarily used for software interchange, for no more than the cost of physically performing the
-distribution. Write to the address in the repository's README.
+distribution. Write to admin@anqor.net.
