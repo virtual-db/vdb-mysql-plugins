@@ -12,19 +12,24 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+      # Oracle skips patch numbers (8.4.12 was never published), so probe the
+      # next few and take the newest that exists.
       - name: Look for a newer 8.4 patch release
         run: |
           cur=$(grep -v '^#' build/mysql-releases.txt | head -1 | awk '{print $1}')
           patch=${cur##*.}
-          next="8.4.$((patch + 1))"
-          url="https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-${next}.tar.gz"
-          if curl -fsIL "$url" >/dev/null; then
+          next=
+          for p in $(seq $((patch + 1)) $((patch + 6))); do
+            curl -fsIL "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.${p}.tar.gz" >/dev/null && next="8.4.${p}"
+          done
+          if [ -n "$next" ]; then
+            url="https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-${next}.tar.gz"
             sha=$(curl -fsSL "$url" | sha256sum | awk '{print $1}')
             sed -i "/^# The first line/a ${next} ${url} ${sha}" build/mysql-releases.txt
             echo "NEXT=${next}" >> $GITHUB_ENV
           fi
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         if: env.NEXT != ''
         with:
           branch: chore/mysql-${{ env.NEXT }}
