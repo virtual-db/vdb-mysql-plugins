@@ -1,7 +1,7 @@
 /* proto.h: the frame and op codes of the plug-in protocol (implementation
    plan doc 07 §1, §3). Bodies are Protocol Buffers messages generated from
    vdb.proto (D-81); this file only adds the op code and the frame. It must
-   match vdb-mysql/protocol/ops.go and frame.go. */
+   match vdb-mysql-engine/protocol/ops.go and frame.go. */
 #ifndef VDB_COMMON_PROTO_H
 #define VDB_COMMON_PROTO_H
 
