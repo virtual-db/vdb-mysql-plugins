@@ -1,4 +1,11 @@
+# CMake options for every mysqld build. RelWithDebInfo without -g: the same
+# -O2 code as Oracle's builds, without the debug info the install would strip
+# anyway. lld links faster. ICU stays bundled, as in Oracle's builds, so REGEXP
+# matches official MySQL exactly.
 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+-DCMAKE_C_FLAGS_RELWITHDEBINFO=-O2 -DNDEBUG
+-DCMAKE_CXX_FLAGS_RELWITHDEBINFO=-O2 -DNDEBUG
+-DWITH_LD=lld
 -DCMAKE_INSTALL_PREFIX=/usr/local/mysql
 -DWITH_SSL=system
 -DWITH_ZLIB=bundled

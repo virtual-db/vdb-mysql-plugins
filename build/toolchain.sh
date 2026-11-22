@@ -4,7 +4,8 @@
 # vdb-mysql's both run it. Oracle Linux 10's own GCC (14) builds mysqld 8.4.
 set -e
 pkgs="gcc gcc-c++ binutils make cmake bison perl tar gzip xz findutils diffutils which
-  openssl-devel ncurses-devel libaio-devel libtirpc-devel rpcgen pkgconf-pkg-config procps-ng"
+  openssl-devel ncurses-devel libaio-devel libtirpc-devel rpcgen pkgconf-pkg-config procps-ng
+  lld"
 # Boost.Multiprecision (MySQL's GIS code) includes quadmath.h on x86_64, where
 # GCC ships it separately; aarch64 has no libquadmath.
 [ "$(uname -m)" = x86_64 ] && pkgs="$pkgs libquadmath-devel"
