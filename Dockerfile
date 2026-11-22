@@ -28,6 +28,9 @@ RUN /vdb/build/build.sh server
 
 FROM server AS installed
 ARG MYSQL_RELEASE=
+# VDB_WERROR=ON (CI) fails the build on any warning in vdb.so's own sources.
+ARG VDB_WERROR=OFF
+ENV VDB_WERROR=${VDB_WERROR}
 COPY src/ /vdb/src/
 RUN /vdb/build/build.sh plugin \
     && DESTDIR=/out /vdb/build/build.sh install \
