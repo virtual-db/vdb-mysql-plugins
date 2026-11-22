@@ -65,6 +65,17 @@ install)
   rm -rf "$prefix/mysql-test" "$prefix/include" "$prefix/man" "$prefix/docs" \
          "$prefix/share/aclocal" "$prefix/lib/pkgconfig" "$prefix/run" "$prefix/var"
   find "$prefix/lib" -name '*.a' -delete
+  # MySQL's test and example programs and plug-ins: VDB runs none of them.
+  rm -f "$prefix"/bin/mysqltest* "$prefix"/bin/mysql_client_test "$prefix"/bin/*_test* \
+        "$prefix"/bin/mysqlslap "$prefix"/bin/myisam* "$prefix"/bin/mysqld_multi "$prefix"/bin/mysqld_safe \
+        "$prefix"/bin/mysqldumpslow "$prefix"/bin/mysql_config
+  ( cd "$prefix/lib/plugin" && rm -rf debug ./*test* ./*example* ./*_mock* ./qa_auth_* \
+      component_udf_reg_* component_udf_unreg_* auth.so adt_null.so conflicting_variables.so mypluglib.so )
+  # Drop debug info (RelWithDebInfo keeps it, about 200 MB of mysqld alone). The
+  # symbol table stays, so a crash backtrace still names its functions.
+  find "$prefix/bin" "$prefix/lib" -type f | while read -r f; do
+    if [ "$(head -c 4 "$f" | od -An -c | tr -d ' ')" = "177ELF" ]; then strip --strip-debug "$f"; fi
+  done
   ;;
 *)
   echo "build.sh: unknown step $step" >&2; exit 1 ;;
