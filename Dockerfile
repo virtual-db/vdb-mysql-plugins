@@ -13,11 +13,8 @@
 ARG BASE=oraclelinux:10-slim
 
 FROM ${BASE} AS toolchain
-# Oracle Linux 10's own GCC (14) builds mysqld 8.4; no gcc-toolset is needed.
-RUN microdnf install -y --enablerepo=ol10_codeready_builder --setopt=install_weak_deps=0 \
-      gcc gcc-c++ binutils make cmake bison perl tar gzip xz findutils diffutils which \
-      openssl-devel ncurses-devel libaio-devel libtirpc-devel rpcgen pkgconf-pkg-config procps-ng \
-    && microdnf clean all
+COPY build/toolchain.sh /tmp/toolchain.sh
+RUN /tmp/toolchain.sh
 
 FROM toolchain AS server
 ARG MYSQL_RELEASE=
