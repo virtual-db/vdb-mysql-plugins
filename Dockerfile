@@ -10,18 +10,14 @@
 #   installed  server + vdb.so, installed into /out/usr/local/mysql with COPYING and the source offer
 # Build the debug variant with --build-arg VARIANT=debug.
 
-ARG BASE=oraclelinux:9-slim
+ARG BASE=oraclelinux:10-slim
 
 FROM ${BASE} AS toolchain
-RUN microdnf install -y --enablerepo=ol9_codeready_builder \
-      gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils \
-      gcc-toolset-12-annobin-annocheck gcc-toolset-12-annobin-plugin-gcc \
-      make cmake bison perl tar gzip xz findutils diffutils which \
+# Oracle Linux 10's own GCC (14) builds mysqld 8.4; no gcc-toolset is needed.
+RUN microdnf install -y --enablerepo=ol10_codeready_builder --setopt=install_weak_deps=0 \
+      gcc gcc-c++ binutils make cmake bison perl tar gzip xz findutils diffutils which \
       openssl-devel ncurses-devel libaio-devel libtirpc-devel rpcgen pkgconf-pkg-config procps-ng \
     && microdnf clean all
-ENV PATH=/opt/rh/gcc-toolset-12/root/usr/bin:$PATH \
-    CC=/opt/rh/gcc-toolset-12/root/usr/bin/gcc \
-    CXX=/opt/rh/gcc-toolset-12/root/usr/bin/g++
 
 FROM toolchain AS server
 ARG MYSQL_RELEASE=
