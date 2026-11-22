@@ -148,7 +148,7 @@ void vdb_table_definition(THD *thd, TABLE *t, const dd::Table *dd, vdb::TableDef
       if (key->user_defined_key_parts < cols.size()) continue;
       bool ok = true;
       for (size_t j = 0; j < cols.size(); j++)
-        if (key->key_part[j].fieldnr - 1 != cols[j]) ok = false;
+        if (static_cast<uint32_t>(key->key_part[j].fieldnr) - 1 != cols[j]) ok = false;
       if (ok) {
         f->set_child_index(k);
         break;
