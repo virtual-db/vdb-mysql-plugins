@@ -56,7 +56,7 @@ server)
 plugin)
   rm -rf "$SRC/storage/vdb"
   cp -a "$VDB_SRC" "$SRC/storage/vdb"
-  cmake "$BLD" >/dev/null
+  cmake "$BLD" -DVDB_WERROR="${VDB_WERROR:-OFF}" >/dev/null
   cmake --build "$BLD" -j "$JOBS" --target vdb -- -k
   ;;
 install)

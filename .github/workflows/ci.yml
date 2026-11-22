@@ -1,7 +1,8 @@
 # ci.yml: Lint and Test on pull requests; the job names are the
 # status checks main's branch protection requires.
 #   Lint  clang-format (pinned version) against .clang-format
-#   Test  builds mysqld 8.4 and vdb.so, then checks mysqld loads vdb.so with
+#   Test  builds mysqld 8.4 and vdb.so (any warning in vdb.so's own sources is
+#         an error; MySQL's own warnings are not), then checks mysqld loads vdb.so with
 #         four ACTIVE plug-ins. The mysqld build is cached in the registry (written by
 #         same-repo PRs with GITHUB_TOKEN), so only a change under build/ recompiles it; src/
 #         changes rebuild vdb.so. This repository publishes no image (D-91).
@@ -51,7 +52,7 @@ jobs:
           ver=$(grep -v '^#' build/mysql-releases.txt | head -1 | awk '{print $1}')
           push=(); [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ] && \
             push=(--cache-to "type=registry,ref=$CACHE,mode=max")
-          docker buildx build . --target installed --build-arg MYSQL_RELEASE="$ver" \
+          docker buildx build . --target installed --build-arg MYSQL_RELEASE="$ver" --build-arg VDB_WERROR=ON \
             --cache-from "type=registry,ref=$CACHE" "${push[@]}" --load -t installed
       - name: mysqld loads vdb.so and reports four ACTIVE plug-ins
         run: |

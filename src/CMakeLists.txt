@@ -49,4 +49,11 @@ IF(TARGET vdb)
   TARGET_INCLUDE_DIRECTORIES(vdb SYSTEM BEFORE PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
   STRING(REPLACE " " ";" vdb_pb_flags "${MY_PUBLIC_PROTOBUF_FLAGS}")
   TARGET_COMPILE_OPTIONS(vdb PRIVATE ${vdb_pb_flags})
+  # CI turns every compiler warning in vdb.so's own sources into an error, so a
+  # warning in our code cannot hide among MySQL's. Release builds leave it off,
+  # so a newer compiler never breaks a release.
+  OPTION(VDB_WERROR "Treat warnings in vdb.so's sources as errors" OFF)
+  IF(VDB_WERROR)
+    TARGET_COMPILE_OPTIONS(vdb PRIVATE -Werror)
+  ENDIF()
 ENDIF()
