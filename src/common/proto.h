@@ -42,6 +42,7 @@ enum Op : uint8_t {
   OP_DELETE = 0x33,
   OP_AUTO_INCREMENT = 0x34,
   OP_TRUNCATE = 0x35,
+  OP_DELETE_ALL = 0x36,
   OP_CATALOG = 0x40,
   OP_ALTER = 0x41,
   OP_ALTER_ROWS = 0x42,

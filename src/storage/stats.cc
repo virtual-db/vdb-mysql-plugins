@@ -6,6 +6,9 @@
 #include <cassert>
 
 #include "sql/handler.h"
+#include "sql/item.h"
+#include "sql/sql_class.h"
+#include "sql/sql_lex.h"
 #include "sql/key.h"
 #include "sql/table.h"
 #include "storage/vdb/common/errors.h"
@@ -16,6 +19,18 @@ namespace {
 constexpr ha_rows kPoison = 0xDEADBEEF;
 #endif
 }  // namespace
+
+/* Whether the statement is a single-table DELETE of every row: no WHERE (or
+   a true constant one) and no LIMIT. For it, mysqld reads stats.records
+   right before delete_all_rows and reports it as the affected-rows count
+   (Sql_cmd_delete::delete_from_single_table), so info() makes it exact. */
+static bool deleting_all(THD *thd) {
+  if (thd_sql_command(thd) != SQLCOM_DELETE) return false;
+  const Query_block *qb = thd->lex->query_block;
+  if (qb == nullptr || qb->select_limit != nullptr) return false;
+  Item *w = qb->where_cond();
+  return w == nullptr || (w->const_item() && w->val_int() != 0);
+}
 
 int ha_vdb_mysql_storage::info(uint flag) {
   /* get_dup_key() resets errkey before asking, so set it from the reply. */
@@ -47,6 +62,15 @@ int ha_vdb_mysql_storage::info(uint flag) {
   stats.mrr_length_per_rec = static_cast<uint>(r.mrr_length_per_rec() + sizeof(void *));
   stats.data_file_length = r.data_file_length() ? r.data_file_length() : stats.records * stats.mean_rec_length;
   stats.deleted = 0;
+  if ((flag & HA_STATUS_NO_LOCK) && deleting_all(ha_thd())) {
+    vdb::Count cm;
+    cm.set_table(tid);
+    vdb::CountReply cr;
+    rc = c->call(vdb_proto::OP_COUNT, cm, &cr, &e);
+    vdb_bump(vdb_st_requests);
+    if (rc != 0) return fail(rc, e);
+    if (!cr.declined()) stats.records = cr.count();
+  }
   batch_cost = r.batch_cost() > 0 ? r.batch_cost() : 1.0;
   for (const auto &ix : r.indexes()) {
     if (ix.index() >= table->s->keys) continue;

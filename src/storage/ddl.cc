@@ -215,8 +215,30 @@ int ha_vdb_mysql_storage::truncate(dd::Table *) {
   return rc == 0 ? 0 : fail(rc, e);
 }
 
-/* DELETE without WHERE deletes row by row, so Source rows are touched. */
-int ha_vdb_mysql_storage::delete_all_rows() { return HA_ERR_WRONG_COMMAND; }
+/* DELETE without WHERE (Source scaling plan 07, SD-1): the engine detaches
+   the table from the Source inside the transaction, so ROLLBACK undoes it,
+   and AUTO_INCREMENT keeps its value. No Source row becomes a Delta entry.
+   mysqld calls this only for a single-table DELETE with no WHERE (or a true
+   constant one), no LIMIT and no DELETE triggers. The engine declines when
+   foreign-key children must be checked or cascaded, or the row count is
+   declined; HA_ERR_WRONG_COMMAND then makes mysqld delete row by row. The
+   affected-rows count is stats.records, which info() made exact just before
+   (deleting_all in stats.cc). */
+int ha_vdb_mysql_storage::delete_all_rows() {
+  int err = 0;
+  Vdb_conn *c = conn(&err);
+  if (c == nullptr) return err;
+  vdb::DeleteAll m;
+  m.set_table(tid);
+  vdb::DeleteAllReply r;
+  vdb::Error e;
+  int rc = c->call(vdb_proto::OP_DELETE_ALL, m, &r, &e);
+  vdb_bump(vdb_st_requests);
+  if (rc != 0) return fail(rc, e);
+  if (r.declined()) return HA_ERR_WRONG_COMMAND;
+  stats.records = r.deleted();
+  return 0;
+}
 
 namespace {
 using F = Alter_inplace_info;

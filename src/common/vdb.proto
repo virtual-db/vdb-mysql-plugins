@@ -351,6 +351,21 @@ message Truncate {
   uint32 table = 1;
 }
 
+// DeleteAll (vdb.so handler::delete_all_rows) is a DELETE without WHERE: the
+// table is detached from the Source like TRUNCATE, but inside the
+// transaction and keeping AUTO_INCREMENT. Reply: DeleteAllReply.
+message DeleteAll {
+  uint32 table = 1;
+}
+
+// DeleteAllReply: deleted is the affected-rows count. declined means nothing
+// was changed and vdb.so lets mysqld delete row by row (the table has
+// foreign-key children to check or cascade, or its row count was declined).
+message DeleteAllReply {
+  uint64 deleted = 1;
+  bool declined = 2;
+}
+
 // ── Catalog definitions ──
 
 message ColumnDef {
