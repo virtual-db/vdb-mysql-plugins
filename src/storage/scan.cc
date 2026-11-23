@@ -177,8 +177,10 @@ void ha_vdb_mysql_storage::position(const uchar *record) {
    not match the WHERE, and asks the engine to release that row's lock
    (Source scaling plan 03, L3). vdb.so forwards the call for every row a
    locking read returned (a plain read asked for no lock, so there is none to
-   name); vdb-mysql decides whether anything is released (only at READ
-   COMMITTED and READ UNCOMMITTED, and only a lock this statement took).
+   name). vdb-mysql-engine decides whether anything is released, by
+   InnoDB's rule (only at READ COMMITTED and READ UNCOMMITTED), and
+   vdb-core's lock table keeps a lock the transaction held before the
+   statement.
    unlock_row returns nothing, so a failed request is ignored: the lock then
    stays until commit, which is stricter, never wrong. */
 void ha_vdb_mysql_storage::unlock_row() {
