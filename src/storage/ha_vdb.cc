@@ -24,7 +24,7 @@ handler *vdb_create_handler(handlerton *hton, TABLE_SHARE *table, bool, MEM_ROOT
 }
 
 ha_vdb_mysql_storage::ha_vdb_mysql_storage(handlerton *hton, TABLE_SHARE *s) : handler(hton, s) {
-  ref_length = 8;  // a position is an index into this statement's positions
+  ref_length = 8;  // set in open(), from the table's keys
 }
 
 ha_vdb_mysql_storage::~ha_vdb_mysql_storage() { my_free(scratch); }
@@ -116,6 +116,14 @@ int ha_vdb_mysql_storage::open(const char *, int, uint, const dd::Table *) {
   thr_lock_data_init(&share->lock, &lock_data, nullptr);
   scratch = static_cast<uchar *>(my_malloc(PSI_NOT_INSTRUMENTED, table_share->rec_buff_length + 1, MYF(MY_WME)));
   if (scratch == nullptr) return HA_ERR_OUT_OF_MEM;
+  /* A position is the row's identity key in MySQL's key format (scan.cc).
+     mysqld allocates ref right after open(), before vdb-mysql names the
+     identity (TableOpen comes at the first statement), so ref_length fits
+     the longest unique key; a keyless table's position is 8 bytes. */
+  ref_length = 8;
+  for (uint k = 0; k < table_share->keys; k++)
+    if ((table_share->key_info[k].flags & HA_NOSAME) && table_share->key_info[k].key_length > ref_length)
+      ref_length = table_share->key_info[k].key_length;
   /* TableOpen is sent at the first statement: open may run where vdb-mysql
      does not know the table yet (during CREATE TABLE). */
   return 0;
@@ -132,7 +140,6 @@ int ha_vdb_mysql_storage::extra(enum ha_extra_function) { return 0; }
 int ha_vdb_mysql_storage::reset() {
   pushed.clear();
   pos_rows.clear();
-  pos_index.clear();
   pos_refs.clear();
   return 0;
 }
@@ -207,4 +214,6 @@ void ha_vdb_mysql_storage::pick_columns(bool all) {
       bitmap_set_bit(table->read_set, i);
     }
   }
+  /* The identity columns too: a position is the identity key (scan.cc). */
+  if (identity != MAX_KEY) add_key_columns(MAX_KEY);
 }

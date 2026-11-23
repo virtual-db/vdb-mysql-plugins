@@ -148,44 +148,97 @@ int ha_vdb_mysql_storage::rnd_next(uchar *buf) {
 
 int ha_vdb_mysql_storage::rnd_end() { return scan_close(); }
 
-/* A position is an index into this statement's saved rows: the row with
-   every column and the reference update_row and delete_row send back. The
-   same row always gets the same position, because mysqld compares positions
-   to find duplicates (semi-join duplicate weedout, DISTINCT by row id).
-   Rows of a table without a usable key (D-10) can be identical, so each of
-   their calls gets a new position. */
+/* A position is the row's identity, as InnoDB's is its primary key (Source
+   scaling plan K4): the identity key in MySQL's key format, zero-padded to
+   ref_length, so the same row always gets the same position (mysqld compares
+   positions byte for byte to find duplicates: semi-join duplicate weedout,
+   DISTINCT by row id) and mysqld keeps positions in its own buffers and temp
+   tables, which spill to disk. rnd_pos reads the row back with a unique
+   lookup on the identity: the Delta answers a row it holds, the Source the
+   others under the statement's snapshot. The position has no origin tag: a
+   row a multi-table UPDATE moves from the Source to the Delta keeps its
+   position.
+
+   A table without a usable key (D-10) has no identity to read back by, so
+   its positions stay indexes into this statement's saved copies of the rows;
+   its rows can be identical, so each call gets a new position. */
 void ha_vdb_mysql_storage::position(const uchar *record) {
+  memset(ref, 0, ref_length);
+  if (identity != MAX_KEY) {
+    KEY *k = &table->key_info[identity];
+    my_bitmap_map *old = dbug_tmp_use_all_columns(table, table->read_set);
+    key_copy(ref, record, k, k->key_length);
+    dbug_tmp_restore_column_map(table->read_set, old);
+    return;
+  }
   vdb::Row r;
   encode_row(record, &r);
-  const std::string key = cur_ref.SerializeAsString();
-  uint64_t n;
-  const bool keyed = !cur_ref.has_whole() || !cur_ref.pk().image().empty();
-  auto it = keyed ? pos_index.find(key) : pos_index.end();
-  if (it != pos_index.end()) {
-    n = it->second;
-    pos_rows[n] = r.SerializeAsString();
-  } else {
-    n = pos_rows.size();
-    pos_rows.push_back(r.SerializeAsString());
-    pos_refs.push_back(cur_ref);
-    if (keyed) pos_index.emplace(key, n);
-  }
+  uint64_t n = pos_rows.size();
+  pos_rows.push_back(r.SerializeAsString());
+  pos_refs.push_back(cur_ref);
   memcpy(ref, &n, sizeof(n));
 }
 
 int ha_vdb_mysql_storage::rnd_pos(uchar *buf, uchar *pos) {
+  std::vector<uint32_t> saved = cols;
+  cols.clear();
+  for (uint i = 0; i < table->s->fields; i++) cols.push_back(i);
+  int e = identity != MAX_KEY ? read_position(buf, pos) : read_saved(buf, pos);
+  cols = saved;
+  return e;
+}
+
+/* A keyless table's position: its saved row. */
+int ha_vdb_mysql_storage::read_saved(uchar *buf, const uchar *pos) {
   uint64_t n;
   memcpy(&n, pos, sizeof(n));
   if (n >= pos_rows.size()) return HA_ERR_KEY_NOT_FOUND;
   vdb::Row r;
   r.ParseFromString(pos_rows[n]);
-  std::vector<uint32_t> saved = cols;
-  cols.clear();
-  for (uint i = 0; i < table->s->fields; i++) cols.push_back(i);
   int e = decode_row(r, buf);
-  cols = saved;
   remember(pos_refs[n]);
   return e;
+}
+
+/* A keyed position: one unique Lookup on the identity, every column. It
+   leaves the current scan alone, since mysqld may read positions while a
+   scan of the same handler is open. */
+int ha_vdb_mysql_storage::read_position(uchar *buf, const uchar *pos) {
+  int err = 0;
+  Vdb_conn *c = conn(&err);
+  if (c == nullptr) return err;
+  KEY *k = &table->key_info[identity];
+  vdb::Lookup m;
+  m.set_table(tid);
+  m.set_version(tversion);
+  m.set_index(identity);
+  make_range_key(identity, pos, k->key_length, k->user_defined_key_parts, m.add_keys());
+  for (uint32_t col : cols) m.add_columns(col);
+  m.set_lock(static_cast<vdb::LockMode>(lock_mode));
+  vdb::LookupReply r;
+  vdb::Error e;
+  int rc = c->call(vdb_proto::OP_LOOKUP, m, &r, &e);
+  vdb_bump(vdb_st_requests);
+  if (rc != 0) return fail(rc, e);
+  std::vector<std::string> saved_shadows;
+  saved_shadows.swap(shadows);
+  take_shadows(r.shadow_images(), &shadows);
+  int out = HA_ERR_KEY_NOT_FOUND;
+  for (int i = 0; i < r.batch().rows_size(); i++) {
+    if (int d = decode_row(r.batch().rows(i), buf)) {
+      out = d;
+      break;
+    }
+    const vdb::RowRef &ref = r.batch().refs(i);
+    if (ref.origin() == vdb::ORIGIN_SOURCE && shadowed(buf)) continue;
+    remember(ref);
+    out = 0;
+    break;
+  }
+  shadows.swap(saved_shadows);
+  /* A unique lookup answers in its first reply; a continuation would be a
+     second batch of the same key, which a unique key cannot have. */
+  return out;
 }
 
 int ha_vdb_mysql_storage::index_init(uint idx, bool) {
