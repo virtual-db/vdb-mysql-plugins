@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstring>
 
+#include "mysql/plugin.h"
 #include "sql/handler.h"
 #include "sql/key.h"
 #include "sql/table.h"
@@ -171,6 +172,27 @@ void ha_vdb_mysql_storage::position(const uchar *record) {
     if (keyed) pos_index.emplace(key, n);
   }
   memcpy(ref, &n, sizeof(n));
+}
+
+/* unlock_row: mysqld found that the row a locking read just returned does
+   not match the WHERE. At READ COMMITTED and READ UNCOMMITTED InnoDB then
+   releases the row's record lock (MySQL manual 17.7.1); at REPEATABLE READ
+   and SERIALIZABLE it keeps it, so no request is sent. The engine releases
+   the lock only if the transaction did not hold it before this statement
+   (Source scaling plan 03, L3). unlock_row returns nothing, so a failed
+   request is ignored: the lock then stays until commit, which is stricter,
+   never wrong. */
+void ha_vdb_mysql_storage::unlock_row() {
+  if (lock_mode == vdb::LOCK_NONE || cur_unlocked || cur_ref.ByteSizeLong() == 0) return;
+  if (thd_tx_isolation(ha_thd()) > ISO_READ_COMMITTED) return;
+  cur_unlocked = true;
+  int err = 0;
+  Vdb_conn *c = conn(&err);
+  if (c == nullptr) return;
+  vdb::Unlock m;
+  m.set_table(tid);
+  *m.mutable_ref() = cur_ref;
+  c->call(vdb_proto::OP_UNLOCK, m, nullptr, nullptr);
 }
 
 int ha_vdb_mysql_storage::rnd_pos(uchar *buf, uchar *pos) {

@@ -74,6 +74,7 @@ class ha_vdb_mysql_storage : public handler {
   int rnd_next(uchar *buf) override;
   int rnd_end() override;
   void position(const uchar *record) override;
+  void unlock_row() override;
   int rnd_pos(uchar *buf, uchar *pos) override;
   int index_init(uint idx, bool sorted) override;
   int index_end() override;
@@ -160,6 +161,7 @@ class ha_vdb_mysql_storage : public handler {
 
   /* The row last returned: what update_row and delete_row send back. */
   vdb::RowRef cur_ref;
+  bool cur_unlocked = false;  // unlock_row already released cur_ref's lock
 
   /* Positions of this statement: a record copy and its reference. */
   std::vector<std::string> pos_rows;
@@ -201,7 +203,10 @@ class ha_vdb_mysql_storage : public handler {
   int lookup(uint idx, const std::vector<vdb::Key> &keys, uchar *buf);
   bool shadowed(const uchar *rec);
   int flush_bulk();
-  void remember(const vdb::RowRef &ref) { cur_ref = ref; }
+  void remember(const vdb::RowRef &ref) {
+    cur_ref = ref;
+    cur_unlocked = false;
+  }
   void make_range_key(uint idx, const uchar *key, uint key_len, uint parts, vdb::Key *out);
 
  private:
