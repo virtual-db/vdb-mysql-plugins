@@ -202,42 +202,38 @@ int ha_vdb_mysql_storage::rename_table(const char *from, const char *to, const d
   return send_catalog(ha_thd(), m, &err_msg);
 }
 
-/* TRUNCATE detaches the table from the Source (product doc 05 §1). */
-int ha_vdb_mysql_storage::truncate(dd::Table *) {
+/* TRUNCATE and DELETE without WHERE both detach the table from the Source
+   (product doc 05 §1; Source scaling plan 07, B1), with the same call. The
+   engine keeps them apart only where MySQL does: a DELETE rolls back with
+   its transaction and keeps AUTO_INCREMENT. */
+int ha_vdb_mysql_storage::detach(uint8_t op, const google::protobuf::MessageLite &m,
+                                 google::protobuf::MessageLite *reply) {
   if (int e = begin(ha_thd())) return e;
   int err = 0;
   Vdb_conn *c = conn(&err);
   if (c == nullptr) return err;
-  vdb::Truncate m;
-  m.set_table(tid);
   vdb::Error e;
-  int rc = c->call(vdb_proto::OP_TRUNCATE, m, nullptr, &e);
+  int rc = c->call(op, m, reply, &e);
+  vdb_bump(vdb_st_requests);
   return rc == 0 ? 0 : fail(rc, e);
 }
 
-/* DELETE without WHERE (Source scaling plan 07, SD-1): the engine detaches
-   the table from the Source inside the transaction, so ROLLBACK undoes it,
-   and AUTO_INCREMENT keeps its value. No Source row becomes a Delta entry.
-   mysqld calls this only for a single-table DELETE with no WHERE (or a true
-   constant one), no LIMIT and no DELETE triggers. The engine declines when
-   foreign-key children must be checked or cascaded, or the row count is
-   declined; HA_ERR_WRONG_COMMAND then makes mysqld delete row by row. The
-   affected-rows count is stats.records, which info() made exact just before
-   (deleting_all in stats.cc). */
+int ha_vdb_mysql_storage::truncate(dd::Table *) {
+  vdb::Truncate m;
+  m.set_table(tid);
+  return detach(vdb_proto::OP_TRUNCATE, m, nullptr);
+}
+
+/* mysqld calls this only for a DELETE of every row; it reports the row count
+   it read from info() just before as the affected rows. When the engine
+   declines (foreign-key children to check or cascade), mysqld deletes row by
+   row. */
 int ha_vdb_mysql_storage::delete_all_rows() {
-  int err = 0;
-  Vdb_conn *c = conn(&err);
-  if (c == nullptr) return err;
   vdb::DeleteAll m;
   m.set_table(tid);
   vdb::DeleteAllReply r;
-  vdb::Error e;
-  int rc = c->call(vdb_proto::OP_DELETE_ALL, m, &r, &e);
-  vdb_bump(vdb_st_requests);
-  if (rc != 0) return fail(rc, e);
-  if (r.declined()) return HA_ERR_WRONG_COMMAND;
-  stats.records = r.deleted();
-  return 0;
+  if (int e = detach(vdb_proto::OP_DELETE_ALL, m, &r)) return e;
+  return r.declined() ? HA_ERR_WRONG_COMMAND : 0;
 }
 
 namespace {
