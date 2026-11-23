@@ -251,6 +251,15 @@ message ScanClose {
   uint32 scan = 1;
 }
 
+// Unlock (vdb.so handler::unlock_row) releases the lock a locking read took
+// for one row it returned and the statement did not keep: at READ COMMITTED
+// mysqld calls it for every row that fails the WHERE. ref is the row's
+// reference from the batch. Reply: Empty.
+message Unlock {
+  uint32 table = 1;
+  RowRef ref = 2;
+}
+
 message Lookup {
   uint32 table = 1;
   uint64 version = 2;

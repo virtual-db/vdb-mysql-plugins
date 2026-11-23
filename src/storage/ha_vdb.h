@@ -74,6 +74,7 @@ class ha_vdb_mysql_storage : public handler {
   int rnd_next(uchar *buf) override;
   int rnd_end() override;
   void position(const uchar *record) override;
+  void unlock_row() override;
   int rnd_pos(uchar *buf, uchar *pos) override;
   int read_position(uchar *buf, const uchar *pos);
   int read_saved(uchar *buf, const uchar *pos);

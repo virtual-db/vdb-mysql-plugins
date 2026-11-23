@@ -36,6 +36,7 @@ enum Op : uint8_t {
   OP_LOOKUP_NEXT = 0x24,
   OP_COUNT = 0x25,
   OP_STATS = 0x26,
+  OP_UNLOCK = 0x27,
   OP_INSERT = 0x30,
   OP_INSERT_BATCH = 0x31,
   OP_UPDATE = 0x32,
