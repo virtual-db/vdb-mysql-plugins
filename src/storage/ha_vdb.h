@@ -183,6 +183,7 @@ class ha_vdb_mysql_storage : public handler {
   /* ── helpers (ha_vdb.cc, rows.cc, keys.cc, scan.cc) ── */
   Vdb_conn *conn(int *err);
   int begin(THD *thd);
+  int detach(uint8_t op, const google::protobuf::MessageLite &m, google::protobuf::MessageLite *reply);
   int fail(int rc, const vdb::Error &e);
   int table_open();
   void pick_columns(bool all);

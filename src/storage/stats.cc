@@ -6,7 +6,10 @@
 #include <cassert>
 
 #include "sql/handler.h"
+#include "sql/item.h"
 #include "sql/key.h"
+#include "sql/sql_class.h"
+#include "sql/sql_lex.h"
 #include "sql/table.h"
 #include "storage/vdb/common/errors.h"
 #include "storage/vdb/storage/ha_vdb.h"
@@ -16,6 +19,20 @@ namespace {
 constexpr ha_rows kPoison = 0xDEADBEEF;
 #endif
 }  // namespace
+
+/* Whether mysqld is running a single-table DELETE of every row: no WHERE (or a
+   constant true one) and no LIMIT. This is MySQL's own parse state, read with
+   MySQL's own functions; vdb.so only reports it in Stats.whole_table_delete.
+   mysqld then takes stats.records right before delete_all_rows as the
+   statement's affected rows (Sql_cmd_delete::delete_from_single_table), and
+   vdb-mysql-engine decides whether to answer it exactly. */
+static bool whole_table_delete(THD *thd) {
+  if (thd_sql_command(thd) != SQLCOM_DELETE) return false;
+  const Query_block *qb = thd->lex->query_block;
+  if (qb == nullptr || qb->select_limit != nullptr) return false;
+  Item *w = qb->where_cond();
+  return w == nullptr || (w->const_item() && w->val_int() != 0);
+}
 
 int ha_vdb_mysql_storage::info(uint flag) {
   /* get_dup_key() resets errkey before asking, so set it from the reply. */
@@ -37,12 +54,15 @@ int ha_vdb_mysql_storage::info(uint flag) {
 #endif
   vdb::Stats m;
   m.set_table(tid);
+  m.set_whole_table_delete((flag & HA_STATUS_NO_LOCK) && whole_table_delete(ha_thd()));
   vdb::StatsReply r;
   vdb::Error e;
   int rc = c->call(vdb_proto::OP_STATS, m, &r, &e);
   vdb_bump(vdb_st_requests);
   if (rc != 0) return fail(rc, e);
-  stats.records = r.records() < 2 ? 2 : r.records();  // never a const table
+  /* An estimate is never below 2, so the optimizer never treats the table as a
+     const table; an exact count is passed as it is. */
+  stats.records = r.estimated() && r.records() < 2 ? 2 : r.records();
   stats.mean_rec_length = static_cast<ulong>(r.mean_rec_length());
   stats.mrr_length_per_rec = static_cast<uint>(r.mrr_length_per_rec() + sizeof(void *));
   stats.data_file_length = r.data_file_length() ? r.data_file_length() : stats.records * stats.mean_rec_length;
