@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cstring>
 
-#include "mysql/plugin.h"
 #include "sql/handler.h"
 #include "sql/key.h"
 #include "sql/table.h"
@@ -175,17 +174,15 @@ void ha_vdb_mysql_storage::position(const uchar *record) {
 }
 
 /* unlock_row: mysqld found that the row a locking read just returned does
-   not match the WHERE. At READ COMMITTED and READ UNCOMMITTED InnoDB then
-   releases the row's record lock (MySQL manual 17.7.1); at REPEATABLE READ
-   and SERIALIZABLE it keeps it, so no request is sent. The engine releases
-   the lock only if the transaction did not hold it before this statement
-   (Source scaling plan 03, L3). unlock_row returns nothing, so a failed
-   request is ignored: the lock then stays until commit, which is stricter,
-   never wrong. */
+   not match the WHERE, and asks the engine to release that row's lock
+   (Source scaling plan 03, L3). vdb.so forwards the call for every row a
+   locking read returned (a plain read asked for no lock, so there is none to
+   name); vdb-mysql decides whether anything is released (only at READ
+   COMMITTED and READ UNCOMMITTED, and only a lock this statement took).
+   unlock_row returns nothing, so a failed request is ignored: the lock then
+   stays until commit, which is stricter, never wrong. */
 void ha_vdb_mysql_storage::unlock_row() {
-  if (lock_mode == vdb::LOCK_NONE || cur_unlocked || cur_ref.ByteSizeLong() == 0) return;
-  if (thd_tx_isolation(ha_thd()) > ISO_READ_COMMITTED) return;
-  cur_unlocked = true;
+  if (lock_mode == vdb::LOCK_NONE) return;
   int err = 0;
   Vdb_conn *c = conn(&err);
   if (c == nullptr) return;
@@ -193,6 +190,7 @@ void ha_vdb_mysql_storage::unlock_row() {
   m.set_table(tid);
   *m.mutable_ref() = cur_ref;
   c->call(vdb_proto::OP_UNLOCK, m, nullptr, nullptr);
+  vdb_bump(vdb_st_requests);
 }
 
 int ha_vdb_mysql_storage::rnd_pos(uchar *buf, uchar *pos) {
