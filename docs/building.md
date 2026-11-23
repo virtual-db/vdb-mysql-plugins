@@ -36,3 +36,11 @@ tree (`WITH_PROTOBUF=bundled`), and linked against its `libprotobuf-lite` (D-81)
 `ghcr.io/virtual-db/vdb-mysql-plugins:buildcache`; `vdb.so` with `VDB_WERROR=ON`; a check that `mysqld` loads
 `vdb.so` with four plug-ins ACTIVE). `mysql-releases.yml` checks weekly for a newer 8.4 patch release and opens a pull
 request adding it.
+
+### A new mysqld release needs proven collations first
+
+vdb-mysql's image build fails for a mysqld release that has no entry in vdb-mysql-engine's
+`internal/collations/proven.yaml` (vdb-mysql#23): without one, every non-binary string index would read whole
+tables. Before a release added to `mysql-releases.txt` (by hand or by the weekly pull request) becomes the default
+line or reaches an image, run the collation proof suite for it in vdb-tests (`runner collations`) and add its
+result to `proven.yaml` by pull request to vdb-mysql-engine.
