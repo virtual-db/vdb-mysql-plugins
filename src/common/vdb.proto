@@ -285,6 +285,11 @@ message Stats {
   // When range is set, records_in_range is asked for it on this index.
   uint32 index = 3;
   Range range = 4;
+  // whole_table_delete says the statement is a single-table DELETE of every
+  // row (no WHERE, or a constant true one, and no LIMIT), as vdb.so reads it
+  // from mysqld's parse. mysqld reports records as the affected-rows count
+  // of delete_all_rows, so vdb-mysql answers with an exact count when it can.
+  bool whole_table_delete = 5;
 }
 
 message IndexStats {
