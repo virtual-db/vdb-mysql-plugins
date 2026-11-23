@@ -75,6 +75,8 @@ class ha_vdb_mysql_storage : public handler {
   int rnd_end() override;
   void position(const uchar *record) override;
   int rnd_pos(uchar *buf, uchar *pos) override;
+  int read_position(uchar *buf, const uchar *pos);
+  int read_saved(uchar *buf, const uchar *pos);
   int index_init(uint idx, bool sorted) override;
   int index_end() override;
   int index_read_map(uchar *buf, const uchar *key, key_part_map kpm, enum ha_rkey_function f) override;
@@ -161,10 +163,10 @@ class ha_vdb_mysql_storage : public handler {
   /* The row last returned: what update_row and delete_row send back. */
   vdb::RowRef cur_ref;
 
-  /* Positions of this statement: a record copy and its reference. */
+  /* Positions of this statement in a keyless table: a record copy and its
+     reference (a keyed table's position is its identity key). */
   std::vector<std::string> pos_rows;
   std::vector<vdb::RowRef> pos_refs;
-  std::unordered_map<std::string, uint64_t> pos_index;  // row reference to position
 
   /* Bulk insert and MRR. */
   bool bulk = false;
