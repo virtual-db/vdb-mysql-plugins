@@ -155,6 +155,7 @@ class ha_vdb_mysql_storage : public handler {
   std::string prev_src, prev_dlt;    // last images, for the order check
   bool have_src_head = false, have_dlt_head = false;
   std::string src_img, dlt_img;
+  uchar *src_head = nullptr, *dlt_head = nullptr;  // each cursor's next row, decoded once
   std::string lookup_cont;
   uint32_t last_keyidx = 0;
   double batch_cost = 1.0;
@@ -190,6 +191,7 @@ class ha_vdb_mysql_storage : public handler {
   void wire_callbacks(Vdb_conn *c);
   int decode_row(const vdb::Row &row, uchar *buf);
   void keep_blob(Field_blob *b, const uchar *buf, uint32_t field);
+  void copy_row(const uchar *from, uchar *buf);
   void detach_blob(Field_blob *b, uint32_t field);
   void encode_row(const uchar *rec, vdb::Row *out);
   void encode_fields(const uchar *rec, const std::vector<Field *> &fs, vdb::Row *out);

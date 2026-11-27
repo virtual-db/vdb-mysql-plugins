@@ -27,7 +27,11 @@ ha_vdb_mysql_storage::ha_vdb_mysql_storage(handlerton *hton, TABLE_SHARE *s) : h
   ref_length = 8;  // set in open(), from the table's keys
 }
 
-ha_vdb_mysql_storage::~ha_vdb_mysql_storage() { my_free(scratch); }
+ha_vdb_mysql_storage::~ha_vdb_mysql_storage() {
+  my_free(scratch);
+  my_free(src_head);
+  my_free(dlt_head);
+}
 
 /* The primary key or identity is the row reference; ordered and reverse
    index reads only on indexes whose collation is proven for order (D-59). */
@@ -116,6 +120,9 @@ int ha_vdb_mysql_storage::open(const char *, int, uint, const dd::Table *) {
   thr_lock_data_init(&share->lock, &lock_data, nullptr);
   scratch = static_cast<uchar *>(my_malloc(PSI_NOT_INSTRUMENTED, table_share->rec_buff_length + 1, MYF(MY_WME)));
   if (scratch == nullptr) return HA_ERR_OUT_OF_MEM;
+  src_head = static_cast<uchar *>(my_malloc(PSI_NOT_INSTRUMENTED, table_share->rec_buff_length + 1, MYF(MY_WME)));
+  dlt_head = static_cast<uchar *>(my_malloc(PSI_NOT_INSTRUMENTED, table_share->rec_buff_length + 1, MYF(MY_WME)));
+  if (src_head == nullptr || dlt_head == nullptr) return HA_ERR_OUT_OF_MEM;
   /* A position is the row's identity key in MySQL's key format (scan.cc).
      mysqld allocates ref right after open(), before vdb-mysql names the
      identity (TableOpen comes at the first statement), so ref_length fits
