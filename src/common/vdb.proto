@@ -185,6 +185,17 @@ message StmtBegin {
   string digest = 12;
 }
 
+// StmtBeginReply answers StmtBegin. keep_unmatched_locks is the engine's
+// answer, for this statement, to whether an Unlock would release anything:
+// true at REPEATABLE READ and SERIALIZABLE, where InnoDB keeps the lock of
+// every row a locking read returned until the transaction ends. vdb.so then
+// sends no Unlock for the statement. It decides nothing itself: an engine
+// that replies Empty leaves the field false and every Unlock is sent.
+message StmtBeginReply {
+  repeated Warning warnings = 1;
+  bool keep_unmatched_locks = 2;
+}
+
 // Empty is the body of requests and replies that carry nothing.
 message Empty {
   repeated Warning warnings = 1;

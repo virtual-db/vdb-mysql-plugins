@@ -9,6 +9,7 @@
 #include "sql/key.h"
 #include "sql/table.h"
 #include "storage/vdb/common/errors.h"
+#include "storage/vdb/common/session.h"
 #include "storage/vdb/storage/ha_vdb.h"
 
 namespace {
@@ -183,7 +184,9 @@ void ha_vdb_mysql_storage::position(const uchar *record) {
    not match the WHERE, and asks the engine to release that row's lock
    (Source scaling plan 03, L3). vdb.so forwards the call for every row a
    locking read returned (a plain read asked for no lock, so there is none to
-   name). vdb-mysql-engine decides whether anything is released, by
+   name), unless the engine answered this statement's StmtBegin with
+   keep_unmatched_locks: then an Unlock would release nothing and is not
+   sent. vdb-mysql-engine decides whether anything is released, by
    InnoDB's rule (only at READ COMMITTED and READ UNCOMMITTED), and
    vdb-core's lock table keeps a lock the transaction held before the
    statement.
@@ -191,6 +194,7 @@ void ha_vdb_mysql_storage::position(const uchar *record) {
    stays until commit, which is stricter, never wrong. */
 void ha_vdb_mysql_storage::unlock_row() {
   if (lock_mode == vdb::LOCK_NONE) return;
+  if (vdb_get_session(ha_thd())->keep_unmatched_locks) return;
   int err = 0;
   Vdb_conn *c = conn(&err);
   if (c == nullptr) return;
