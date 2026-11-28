@@ -4,8 +4,10 @@
    order by the index's sort image (with the identity key as tie-break); on
    equal keys the Delta row wins and the Source row is dropped (D-33). Each
    cursor is checked to be monotonic; a violation fails the statement and
-   counts vdb_order_violations. Only indexes whose collation is proven for
-   order are read in order (D-59), so image order is MySQL's order here. */
+   counts vdb_order_violations. Each cursor's next row is decoded once, into
+   its own head buffer, and the row taken is copied from there. Only indexes
+   whose collation is proven for order are read in order (D-59), so image
+   order is MySQL's order here. */
 #include "sql/handler.h"
 #include "sql/table.h"
 #include "storage/vdb/common/errors.h"
@@ -60,8 +62,8 @@ int ha_vdb_mysql_storage::next_ordered(uchar *buf) {
   for (;;) {
     if (!have_src_head) {
       if (src.more()) {
-        if (int e = decode_row(src.batch.rows(src.pos), scratch)) return e;
-        src_img = head_image(this, table, active_index, identity, scratch);
+        if (int e = decode_row(src.batch.rows(src.pos), src_head)) return e;
+        src_img = head_image(this, table, active_index, identity, src_head);
         have_src_head = true;
       } else if (!src.end) {
         if (int e = fetch_more(&src, vdb::CURSOR_SOURCE)) return e;
@@ -70,8 +72,8 @@ int ha_vdb_mysql_storage::next_ordered(uchar *buf) {
     }
     if (!have_dlt_head) {
       if (dlt.more()) {
-        if (int e = decode_row(dlt.batch.rows(dlt.pos), scratch)) return e;
-        dlt_img = head_image(this, table, active_index, identity, scratch);
+        if (int e = decode_row(dlt.batch.rows(dlt.pos), dlt_head)) return e;
+        dlt_img = head_image(this, table, active_index, identity, dlt_head);
         have_dlt_head = true;
       } else if (!dlt.end) {
         if (int e = fetch_more(&dlt, vdb::CURSOR_DELTA)) return e;
@@ -108,7 +110,7 @@ int ha_vdb_mysql_storage::next_ordered(uchar *buf) {
     prev = img;
     int i = rows.pos++;
     (take_src ? have_src_head : have_dlt_head) = false;
-    if (int e = decode_row(rows.batch.rows(i), buf)) return e;
+    copy_row(take_src ? src_head : dlt_head, buf);
     remember(rows.batch.refs(i));
     return 0;
   }
