@@ -123,6 +123,8 @@ int ha_vdb_mysql_storage::open(const char *, int, uint, const dd::Table *) {
   src_head = static_cast<uchar *>(my_malloc(PSI_NOT_INSTRUMENTED, table_share->rec_buff_length + 1, MYF(MY_WME)));
   dlt_head = static_cast<uchar *>(my_malloc(PSI_NOT_INSTRUMENTED, table_share->rec_buff_length + 1, MYF(MY_WME)));
   if (src_head == nullptr || dlt_head == nullptr) return HA_ERR_OUT_OF_MEM;
+  memcpy(src_head, table_share->default_values, table_share->reclength);
+  memcpy(dlt_head, table_share->default_values, table_share->reclength);
   /* A position is the row's identity key in MySQL's key format (scan.cc).
      mysqld allocates ref right after open(), before vdb-mysql names the
      identity (TableOpen comes at the first statement), so ref_length fits

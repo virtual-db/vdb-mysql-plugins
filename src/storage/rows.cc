@@ -95,16 +95,20 @@ void ha_vdb_mysql_storage::keep_blob(Field_blob *b, const uchar *buf, uint32_t f
 
 /* Copy a row decode_row stored in another buffer into buf: the null bytes
    and the requested columns, the same bytes decode_row would have written.
-   A BLOB, TEXT or JSON value gets buf's own copy, so it lives as long as
-   one decoded into buf directly (keep_blob). */
+   A NULL column's bytes are left as they are, as decode_row leaves them:
+   the head buffer's bytes there were never written (a BLOB's length and
+   pointer there are garbage that detach_blob would later read). A BLOB,
+   TEXT or JSON value gets buf's own copy, so it lives as long as one
+   decoded into buf directly (keep_blob). */
 void ha_vdb_mysql_storage::copy_row(const uchar *from, uchar *buf) {
   memcpy(buf, from, table->s->null_bytes);
   ptrdiff_t off = buf - table->record[0];
   for (uint32_t c : cols) {
     Field *f = table->field[c];
+    if (f->is_real_null(off)) continue;
     const size_t at = f->offset(table->record[0]);
     memcpy(buf + at, from + at, f->pack_length());
-    if (f->is_flag_set(BLOB_FLAG) && !f->is_real_null(off)) {
+    if (f->is_flag_set(BLOB_FLAG)) {
       f->move_field_offset(off);
       keep_blob(down_cast<Field_blob *>(f), buf, c);
       f->move_field_offset(-off);
