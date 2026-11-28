@@ -46,6 +46,7 @@ int vdb_commit(handlerton *, THD *thd, bool all) {
     rc = send_simple(thd, vdb_proto::OP_STMT_END, req);
   }
   s->stmt_open = false;
+  s->keep_unmatched_locks = false;  // back to sending every Unlock until the next StmtBegin
   return rc;
 }
 
@@ -62,6 +63,7 @@ int vdb_rollback(handlerton *, THD *thd, bool all) {
     rc = send_simple(thd, vdb_proto::OP_STMT_ROLLBACK, req);
   }
   s->stmt_open = false;
+  s->keep_unmatched_locks = false;  // back to sending every Unlock until the next StmtBegin
   return rc;
 }
 

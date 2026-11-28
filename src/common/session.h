@@ -17,6 +17,10 @@ struct Vdb_session {
   bool stmt_open = false;      // StmtBegin sent for the current statement
   uint64_t stmt_query_id = 0;  // the statement it was sent for
   bool in_trx = false;         // registered for the transaction
+  /* The engine's answer to StmtBegin for the current statement: Unlock
+     would release nothing (REPEATABLE READ, SERIALIZABLE), so unlock_row
+     sends none. False until the engine says so. */
+  bool keep_unmatched_locks = false;
 };
 
 extern handlerton *vdb_hton;

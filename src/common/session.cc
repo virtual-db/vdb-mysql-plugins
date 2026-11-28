@@ -99,10 +99,13 @@ int vdb_begin_statement(THD *thd, std::string *msg) {
     const CHARSET_INFO *cc = thd->variables.collation_connection;
     add_setting(&m, "collation_connection", cc->m_coll_name, strlen(cc->m_coll_name));
     add_setting(&m, "character_set_connection", cc->csname, strlen(cc->csname));
+    vdb::StmtBeginReply r;
     vdb::Error e;
-    int rc = c->call(vdb_proto::OP_STMT_BEGIN, m, nullptr, &e);
+    s->keep_unmatched_locks = false;
+    int rc = c->call(vdb_proto::OP_STMT_BEGIN, m, &r, &e);
     if (rc < 0) return vdb_unavailable(msg);
     if (rc > 0) return vdb_ha_error(e, msg, nullptr);
+    s->keep_unmatched_locks = r.keep_unmatched_locks();
     s->stmt_open = true;
     s->stmt_query_id = static_cast<uint64_t>(thd->query_id);
   }
